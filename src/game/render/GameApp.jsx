@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Dimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { GameRenderer } from './GameRenderer';
+import { GameCore } from '../core/GameCore';
 
 const { width, height } = Dimensions.get('window');
 
@@ -10,31 +11,35 @@ const { width, height } = Dimensions.get('window');
  * Separated so it can be dynamically imported after Skia loads
  */
 export function GameApp() {
-  // Use refs for animation state (avoids React re-render overhead)
-  const mascotYRef = useRef(100);
-  const velocityRef = useRef(0);
+  // Game physics core
+  const gameCore = useRef(null);
   const [, forceUpdate] = useState(0);
+
+  // Mascot position from physics
+  const mascotPos = useRef({ x: width / 2, y: 100 });
+  const obstacles = useRef([]);
 
   // Simple line drawing state
   const [lines, setLines] = useState([]);
   const [currentLine, setCurrentLine] = useState(null);
 
   useEffect(() => {
+    // Initialize physics
+    gameCore.current = new GameCore(width, height);
+
     let animationFrameId;
+    let lastTime = performance.now();
 
-    const animate = () => {
-      // Update physics
-      const newY = mascotYRef.current + velocityRef.current;
+    const animate = (currentTime) => {
+      const deltaTime = currentTime - lastTime;
+      lastTime = currentTime;
 
-      // Simple bounce at bottom
-      if (newY > height - 50) {
-        velocityRef.current = -8;
-        mascotYRef.current = height - 50;
-      } else {
-        mascotYRef.current = newY;
-      }
+      // Update physics simulation
+      gameCore.current.step(deltaTime);
 
-      velocityRef.current += 0.5; // Gravity
+      // Get updated positions from physics
+      mascotPos.current = gameCore.current.getMascotPosition();
+      obstacles.current = gameCore.current.getObstacles();
 
       // Force re-render
       forceUpdate(n => n + 1);
@@ -45,7 +50,10 @@ export function GameApp() {
 
     animationFrameId = requestAnimationFrame(animate);
 
-    return () => cancelAnimationFrame(animationFrameId);
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      gameCore.current.destroy();
+    };
   }, []);
 
   // Touch handlers for drawing lines
@@ -87,8 +95,9 @@ export function GameApp() {
       <GameRenderer
         width={width}
         height={height}
-        mascotX={width / 2}
-        mascotY={mascotYRef.current}
+        mascotX={mascotPos.current.x}
+        mascotY={mascotPos.current.y}
+        obstacles={obstacles.current}
         lines={lines}
         currentLine={currentLine}
       />
