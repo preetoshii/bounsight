@@ -15,6 +15,10 @@ export function GameApp() {
   const velocityRef = useRef(0);
   const [, forceUpdate] = useState(0);
 
+  // Simple line drawing state
+  const [lines, setLines] = useState([]);
+  const [currentLine, setCurrentLine] = useState(null);
+
   useEffect(() => {
     let animationFrameId;
 
@@ -44,13 +48,49 @@ export function GameApp() {
     return () => cancelAnimationFrame(animationFrameId);
   }, []);
 
+  // Touch handlers for drawing lines
+  const handleTouchStart = (event) => {
+    const touch = event.nativeEvent.touches?.[0] || event.nativeEvent;
+    setCurrentLine({
+      startX: touch.pageX,
+      startY: touch.pageY,
+      endX: touch.pageX,
+      endY: touch.pageY,
+    });
+  };
+
+  const handleTouchMove = (event) => {
+    if (!currentLine) return;
+    const touch = event.nativeEvent.touches?.[0] || event.nativeEvent;
+    setCurrentLine({
+      ...currentLine,
+      endX: touch.pageX,
+      endY: touch.pageY,
+    });
+  };
+
+  const handleTouchEnd = () => {
+    if (currentLine) {
+      setLines([...lines, currentLine]);
+      setCurrentLine(null);
+    }
+  };
+
   return (
-    <View style={styles.container}>
+    <View
+      style={styles.container}
+      onStartShouldSetResponder={() => true}
+      onResponderGrant={handleTouchStart}
+      onResponderMove={handleTouchMove}
+      onResponderRelease={handleTouchEnd}
+    >
       <GameRenderer
         width={width}
         height={height}
         mascotX={width / 2}
         mascotY={mascotYRef.current}
+        lines={lines}
+        currentLine={currentLine}
       />
       <StatusBar style="light" />
     </View>

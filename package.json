@@ -4,13 +4,13 @@
   "main": "index.js",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo start --android --port 8084",
+    "ios": "expo start --ios --port 8083",
     "web": "expo start --web --port 8082",
     "postinstall": "npx setup-skia-web public && node scripts/fix-canvaskit-browser.js"
   },
   "dependencies": {
-    "@shopify/react-native-skia": "^2.3.6",
+    "@shopify/react-native-skia": "^2.2.12",
     "canvaskit-wasm": "^0.40.0",
     "expo": "~54.0.20",
     "expo-haptics": "^15.0.7",
@@ -19,7 +19,11 @@
     "react": "19.1.0",
     "react-dom": "^19.1.0",
     "react-native": "0.81.5",
+    "react-native-reanimated": "~4.1.1",
     "react-native-web": "^0.21.2"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "babel-preset-expo": "^54.0.6"
+  }
 }
