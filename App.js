@@ -1,20 +1,86 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, Platform, Text, ActivityIndicator } from 'react-native';
+import { LoadSkiaWeb } from '@shopify/react-native-skia/lib/module/web';
+
+// Load Skia on web immediately (before any Skia imports)
+let skiaLoadPromise = null;
+if (Platform.OS === 'web') {
+  skiaLoadPromise = LoadSkiaWeb({
+    locateFile: (file) =>
+      `https://cdn.jsdelivr.net/npm/canvaskit-wasm@0.40.0/bin/full/${file}`,
+  });
+}
 
 export default function App() {
-  return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
-  );
+  const [GameAppComponent, setGameAppComponent] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function loadApp() {
+      try {
+        if (Platform.OS === 'web') {
+          // Wait for Skia to load first
+          await skiaLoadPromise;
+          console.log('✓ Skia loaded successfully');
+        }
+
+        // Now dynamically import GameApp (which imports Skia components)
+        const module = await import('./src/game/render/GameApp');
+        setGameAppComponent(() => module.GameApp);
+        setLoading(false);
+      } catch (err) {
+        console.error('✗ Failed to load:', err);
+        setError(err.message);
+        setLoading(false);
+      }
+    }
+
+    loadApp();
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#69e" />
+        <Text style={styles.loadingText}>Loading Skia...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>Error: {error}</Text>
+      </View>
+    );
+  }
+
+  if (!GameAppComponent) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>Failed to load game</Text>
+      </View>
+    );
+  }
+
+  return <GameAppComponent />;
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#0a0a0a',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  loadingText: {
+    color: '#ffffff',
+    fontSize: 18,
+    marginTop: 20,
+  },
+  errorText: {
+    color: '#ff6b6b',
+    fontSize: 18,
   },
 });
