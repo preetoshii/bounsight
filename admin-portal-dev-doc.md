@@ -265,19 +265,71 @@ const [scheduledMessages, setScheduledMessages] = useState({}); // All scheduled
 
 ---
 
-## Authentication (Staircase Pattern)
+## Game ↔ Admin Portal Transitions
 
-The admin portal is hidden until the staircase pattern is executed (see main dev doc Section 9).
+### Entering Admin Portal
 
-**Integration:**
-- Staircase validation happens in `GameCore.js`
-- On successful validation, emit event/callback
-- `GameApp.jsx` listens for unlock event
-- Fades game out, fades `AdminPortal.jsx` in
+**Trigger:** Staircase pattern executed successfully (see main dev doc Section 9)
 
-**Exit:**
-- Tap X in Calendar View → Fade admin out, game back in
-- Admin stays unlocked for session (or timeout after N minutes of inactivity)
+**Transition:**
+1. Game fades out (opacity 1 → 0, 400ms)
+2. Admin Portal (Calendar View) fades in (opacity 0 → 1, 400ms)
+3. Transitions can overlap slightly for smooth feel
+
+**Technical:**
+- `GameApp.jsx` manages both game and admin portal components
+- Uses opacity-based fade (Animated API or CSS transitions)
+- Game component remains mounted but hidden (opacity: 0, pointerEvents: 'none')
+- Admin portal mounts and fades in when unlocked
+
+### Exiting Admin Portal
+
+**Trigger:** Tap X button in Calendar View
+
+**Transition:**
+1. Admin Portal fades out (opacity 1 → 0, 400ms)
+2. Game fades in (opacity 0 → 1, 400ms)
+3. Admin portal can unmount after fade completes (optional, to free memory)
+
+**Session:**
+- Admin stays unlocked for current session (or timeout after 30 minutes of inactivity)
+- Re-entering requires staircase pattern again after timeout/close
+
+### Implementation Sketch
+
+```javascript
+// GameApp.jsx
+const [adminUnlocked, setAdminUnlocked] = useState(false);
+const gameOpacity = useRef(new Animated.Value(1)).current;
+const adminOpacity = useRef(new Animated.Value(0)).current;
+
+const showAdmin = () => {
+  Animated.parallel([
+    Animated.timing(gameOpacity, { toValue: 0, duration: 400 }),
+    Animated.timing(adminOpacity, { toValue: 1, duration: 400 })
+  ]).start();
+};
+
+const hideAdmin = () => {
+  Animated.parallel([
+    Animated.timing(adminOpacity, { toValue: 0, duration: 400 }),
+    Animated.timing(gameOpacity, { toValue: 1, duration: 400 })
+  ]).start();
+};
+
+return (
+  <View>
+    <Animated.View style={{ opacity: gameOpacity }}>
+      <GameRenderer />
+    </Animated.View>
+    {adminUnlocked && (
+      <Animated.View style={{ opacity: adminOpacity, position: 'absolute' }}>
+        <AdminPortal onClose={hideAdmin} />
+      </Animated.View>
+    )}
+  </View>
+);
+```
 
 ---
 
