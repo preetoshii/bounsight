@@ -10,6 +10,7 @@ import { playSound } from '../../utils/audio';
 import { preloadMessageAudio } from '../../services/audioPlayer';
 import { generateAudioForMessage } from '../../services/wordAudioService';
 import { fetchMessages } from '../../admin/githubApi';
+import { Button } from '../../components/Button';
 
 /**
  * GameApp - Main game component
@@ -335,11 +336,9 @@ export function GameApp() {
           />
 
           {/* Admin Button - Feather Icon */}
-          <View style={styles.adminButton}>
-            <TouchableOpacity onPress={openAdmin} style={styles.adminButtonTouchable}>
-              <Feather name="feather" size={20} color="#ffffff" style={{ opacity: 0.6 }} />
-            </TouchableOpacity>
-          </View>
+          <Button onPress={openAdmin} style={styles.adminButton}>
+            <Feather name="feather" size={20} color="#ffffff" style={{ opacity: 0.6 }} />
+          </Button>
         </View>
       )}
 
@@ -385,13 +384,9 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    zIndex: 1000,
-  },
-  adminButtonTouchable: {
-    width: '100%',
-    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 1000,
   },
   audioStatusContainer: {
     position: 'absolute',

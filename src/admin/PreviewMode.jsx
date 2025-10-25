@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { GameRenderer } from '../game/render/GameRenderer';
 import { GameCore } from '../game/core/GameCore';
 import { config } from '../config';
 import { preloadMessageAudio } from '../services/audioPlayer';
+import { Button } from '../components/Button';
 
 /**
  * PreviewMode - Game preview with draft message and overlay controls
@@ -183,11 +184,11 @@ export function PreviewMode({ message, isActive, onSave }) {
         <Text style={styles.previewLabel}>PREVIEW</Text>
 
         {/* Save/Send Now button (bottom-center) */}
-        <TouchableOpacity style={styles.saveButton} onPress={onSave}>
+        <Button style={styles.saveButton} onPress={onSave}>
           <Text style={styles.saveButtonText}>
             {isActive ? 'Send Now' : 'Save'}
           </Text>
-        </TouchableOpacity>
+        </Button>
       </View>
     </View>
   );

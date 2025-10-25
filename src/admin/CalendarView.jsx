@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, TextI
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, withDelay } from 'react-native-reanimated';
 import { Feather } from '@expo/vector-icons';
 import { playSound } from '../utils/audio';
+import { Button } from '../components/Button';
 
 /**
  * Individual Card Item with Reanimated animations
@@ -400,8 +401,11 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
             { transform: [{ translateY: previewButtonTranslateY }] }
           ]}
         >
-          <TouchableOpacity
-            style={styles.previewButton}
+          <Button
+            style={[
+              styles.previewButton,
+              !editingText.trim() && styles.previewButtonDisabled
+            ]}
             onPress={handlePreview}
             disabled={!editingText.trim()}
           >
@@ -411,7 +415,7 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
                 Preview
               </Text>
             </View>
-          </TouchableOpacity>
+          </Button>
         </RNAnimated.View>
       )}
     </View>
