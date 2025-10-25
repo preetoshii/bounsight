@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Animated, Text } from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { CalendarView } from './CalendarView';
 import { PreviewMode } from './PreviewMode';
@@ -11,7 +11,7 @@ import { Button } from '../components/Button';
 
 /**
  * AdminPortal - Root component for admin interface
- * Manages view state and fade transitions between views
+ * Manages view state and transitions between calendar, preview, and confirmation views
  */
 export function AdminPortal({ onClose, preloadedData }) {
   const [currentView, setCurrentView] = useState('calendar'); // 'calendar' | 'preview' | 'confirmation'
@@ -22,10 +22,6 @@ export function AdminPortal({ onClose, preloadedData }) {
   const [messagesData, setMessagesData] = useState(null); // Full messages.json data (includes _sha for updates)
   const [isLoading, setIsLoading] = useState(!preloadedData); // Loading state (false if data was preloaded)
   const [audioGenerationStatus, setAudioGenerationStatus] = useState(null); // {status: 'generating'|'complete'|'error', progress: {current, total}, message}
-
-  // Animated values for view transitions
-  const calendarOpacity = React.useRef(new Animated.Value(1)).current;
-  const previewOpacity = React.useRef(new Animated.Value(0)).current;
 
   // Load messages on mount (or use preloaded data)
   useEffect(() => {
@@ -114,36 +110,13 @@ export function AdminPortal({ onClose, preloadedData }) {
       setTimeout(() => setAudioGenerationStatus(null), 3000);
     }
 
-    // Fade out calendar first, then fade in preview
-    Animated.timing(calendarOpacity, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => {
-      setCurrentView('preview');
-      Animated.timing(previewOpacity, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    });
+    // Navigate to preview
+    setCurrentView('preview');
   };
 
   // Navigate back from preview to calendar (with edit state preserved)
   const backFromPreview = () => {
-    // Fade out preview first, then fade in calendar
-    Animated.timing(previewOpacity, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => {
-      setCurrentView('calendar');
-      Animated.timing(calendarOpacity, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    });
+    setCurrentView('calendar');
   };
 
   // Exit edit mode (collapse card)
@@ -282,8 +255,8 @@ export function AdminPortal({ onClose, preloadedData }) {
       >
         <Feather name="arrow-left" size={28} color="#ffffff" />
       </Button>
-      {/* Calendar View - always rendered for smooth transitions */}
-      <Animated.View style={[styles.fullScreen, { opacity: calendarOpacity, pointerEvents: currentView === 'calendar' ? 'auto' : 'none' }]}>
+      {/* Calendar View - only render when active */}
+      {currentView === 'calendar' && (
         <CalendarView
           scheduledMessages={scheduledMessages}
           onSelectDate={openEdit}
@@ -293,16 +266,16 @@ export function AdminPortal({ onClose, preloadedData }) {
           scrollToDate={scrollToDate}
           onScrollComplete={() => setScrollToDate(null)}
         />
-      </Animated.View>
+      )}
 
-      {/* Preview Mode - always rendered for smooth transitions */}
-      <Animated.View style={[styles.fullScreen, { opacity: previewOpacity, pointerEvents: currentView === 'preview' ? 'auto' : 'none' }]}>
+      {/* Preview Mode - only render when active */}
+      {currentView === 'preview' && (
         <PreviewMode
           message={draftMessage}
           isActive={isEditingToday()}
           onSave={isEditingToday() ? sendNow : saveMessage}
         />
-      </Animated.View>
+      )}
 
       {currentView === 'confirmation' && (
         <Confirmation
