@@ -356,6 +356,29 @@ export class GameCore {
   }
 
   /**
+   * Set message (for preview mode)
+   */
+  setMessage(messageText) {
+    if (messageText) {
+      this.message = messageText.toLowerCase().split(/\s+/);
+      this.wordIndex = 0;
+      this.currentWord = null;
+    }
+  }
+
+  /**
+   * Reset to default message
+   */
+  resetMessage() {
+    this.message = [
+      "you", "are", "loved", "beyond", "measure",
+      "and", "nothing", "can", "change", "that"
+    ];
+    this.wordIndex = 0;
+    this.currentWord = null;
+  }
+
+  /**
    * Get Gelato line data for rendering
    */
   getGelatoLineData() {

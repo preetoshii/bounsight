@@ -38,6 +38,20 @@ export function GameApp() {
   const gameOpacity = useRef(new Animated.Value(1)).current;
   const adminOpacity = useRef(new Animated.Value(0)).current;
 
+  // Preview mode state
+  const [previewMode, setPreviewMode] = useState(null); // { message, isActive, onBack, onSave }
+
+  // Update message when preview mode changes
+  useEffect(() => {
+    if (gameCore.current) {
+      if (previewMode) {
+        gameCore.current.setMessage(previewMode.message);
+      } else {
+        gameCore.current.resetMessage();
+      }
+    }
+  }, [previewMode]);
+
   // Initialize physics once on mount
   useEffect(() => {
     // Initialize physics with current dimensions
@@ -216,17 +230,37 @@ export function GameApp() {
         />
 
         {/* Temporary Admin Button (will be replaced with staircase unlock) */}
-        {!showAdmin && (
+        {!showAdmin && !previewMode && (
           <TouchableOpacity style={styles.adminButton} onPress={openAdmin}>
             <Text style={styles.adminButtonText}>Admin</Text>
           </TouchableOpacity>
+        )}
+
+        {/* Preview Mode Overlay */}
+        {previewMode && (
+          <View style={styles.previewOverlay}>
+            {/* Back button (top-left) */}
+            <TouchableOpacity style={styles.previewBackButton} onPress={previewMode.onBack}>
+              <Text style={styles.previewBackButtonText}>←</Text>
+            </TouchableOpacity>
+
+            {/* Save/Send Now button (bottom-center) */}
+            <TouchableOpacity style={styles.previewSaveButton} onPress={previewMode.onSave}>
+              <Text style={styles.previewSaveButtonText}>
+                {previewMode.isActive ? 'Send Now' : 'Save'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
       </Animated.View>
 
       {/* Admin portal with fade animation */}
       {showAdmin && (
         <Animated.View style={[styles.fullScreen, { opacity: adminOpacity }]}>
-          <AdminPortal onClose={closeAdmin} />
+          <AdminPortal
+            onClose={closeAdmin}
+            onShowPreview={setPreviewMode}
+          />
         </Animated.View>
       )}
 
@@ -261,5 +295,46 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '600',
+  },
+  previewOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    pointerEvents: 'box-none', // Allow touches to pass through to game
+  },
+  previewBackButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewBackButtonText: {
+    fontSize: 28,
+    color: '#ffffff',
+    fontWeight: '300',
+  },
+  previewSaveButton: {
+    position: 'absolute',
+    bottom: 40,
+    left: '50%',
+    transform: [{ translateX: -80 }],
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 8,
+    minWidth: 160,
+    alignItems: 'center',
+  },
+  previewSaveButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0a0a0a',
   },
 });
