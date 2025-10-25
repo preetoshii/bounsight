@@ -76,7 +76,7 @@ function CardItem({
       { translateY: translateY.value }
     ],
     opacity: opacity.value,
-    width: cardSize + cardSpacing, // Include spacing for snapToInterval
+    width: isEditing ? editCardWidth : cardSize + cardSpacing, // Expand wrapper when editing
     scrollSnapAlign: 'center', // CSS scroll snap for web
   }));
 
