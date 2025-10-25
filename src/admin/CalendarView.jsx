@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, TextInput, Animated as RNAnimated } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, withDelay } from 'react-native-reanimated';
+import { Feather } from '@expo/vector-icons';
 
 /**
  * Individual Card Item with Reanimated animations
@@ -12,7 +13,8 @@ function CardItem({
   isEditing,
   isOtherCardEditing,
   cardSize,
-  editCardSize,
+  editCardWidth,
+  editCardHeight,
   cardSpacing,
   editingText,
   setEditingText,
@@ -29,6 +31,8 @@ function CardItem({
   const scale = useSharedValue(1);
   const opacity = useSharedValue(1); // Start visible so we see them rise
   const translateY = useSharedValue(500); // Start below screen
+  const borderOpacity = useSharedValue(1); // Border starts visible
+  const backgroundOpacity = useSharedValue(1); // Background starts visible
 
   // Calculate delay relative to today's card (so today starts immediately)
   const relativeIndex = cardIndex - todayIndex;
@@ -61,18 +65,22 @@ function CardItem({
   // Animate when editing state changes
   useEffect(() => {
     if (isEditing) {
-      scale.value = withSpring(1.1, { damping: 15, stiffness: 150 });
-      opacity.value = withTiming(1, { duration: 300 });
+      scale.value = withSpring(1.1, { damping: 25, stiffness: 400, mass: 0.5 });
+      opacity.value = withTiming(1, { duration: 200 });
+      borderOpacity.value = withTiming(0, { duration: 300 }); // Fade out border
+      backgroundOpacity.value = withTiming(0, { duration: 300 }); // Fade out background
     } else if (isOtherCardEditing) {
-      scale.value = withTiming(1, { duration: 300 });
-      opacity.value = withTiming(0.2, { duration: 300 });
+      scale.value = withTiming(1, { duration: 200 });
+      opacity.value = withTiming(0, { duration: 200 }); // Completely disappear
     } else {
-      scale.value = withSpring(1, { damping: 15, stiffness: 150 });
-      opacity.value = withTiming(1, { duration: 300 });
+      scale.value = withSpring(1, { damping: 25, stiffness: 400, mass: 0.5 });
+      opacity.value = withTiming(1, { duration: 200 });
+      borderOpacity.value = withTiming(1, { duration: 300 }); // Fade in border
+      backgroundOpacity.value = withTiming(1, { duration: 300 }); // Fade in background
     }
   }, [isEditing, isOtherCardEditing]);
 
-  // Animated style
+  // Animated style for wrapper
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
       { scale: scale.value },
@@ -83,27 +91,37 @@ function CardItem({
     scrollSnapAlign: 'center', // CSS scroll snap for web
   }));
 
+  // Animated style for card border and background
+  const cardAnimatedStyle = useAnimatedStyle(() => ({
+    borderColor: `rgba(255, 255, 255, ${borderOpacity.value})`,
+    backgroundColor: `rgba(17, 17, 17, ${backgroundOpacity.value})`,
+  }));
+
   return (
     <Animated.View style={[animatedStyle, { alignItems: 'center' }]}>
-      <TouchableOpacity
+      <Animated.View
         style={[
           styles.card,
+          cardAnimatedStyle,
           {
-            width: isEditing ? editCardSize : cardSize,
-            height: isEditing ? editCardSize : cardSize,
+            width: isEditing ? editCardWidth : cardSize,
+            height: isEditing ? editCardHeight : cardSize,
           },
           slot.isPast && styles.cardPast,
           slot.isToday && styles.cardToday,
         ]}
-        onPress={(e) => {
-          if (!isEditing) {
-            e.stopPropagation();
-            handleCardPress(slot.date, message?.text || '', isEditable);
-          }
-        }}
-        disabled={slot.isPast}
-        activeOpacity={0.9}
       >
+        <TouchableOpacity
+          style={{ flex: 1 }}
+          onPress={(e) => {
+            if (!isEditing) {
+              e.stopPropagation();
+              handleCardPress(slot.date, message?.text || '', isEditable, cardIndex);
+            }
+          }}
+          disabled={slot.isPast}
+          activeOpacity={0.9}
+        >
         {/* Date header */}
         <View style={styles.cardHeader}>
           <Text style={[styles.cardDate, slot.isPast && styles.textMuted]}>
@@ -126,6 +144,7 @@ function CardItem({
             placeholder="Tap to add a message"
             placeholderTextColor="#666"
             multiline
+            scrollEnabled={true}
             editable={isEditing}
             showSoftInputOnFocus={isEditing}
             textAlign="center"
@@ -138,25 +157,8 @@ function CardItem({
             <Text style={styles.editIconText}>✎</Text>
           </View>
         )}
-
-        {/* Preview button when editing */}
-        {isEditing && (
-          <TouchableOpacity
-            style={styles.previewButton}
-            onPress={(e) => {
-              e.stopPropagation();
-              // Exit edit mode and go to preview
-              handleBackFromEdit();
-              onSelectDate(slot.date, editingText);
-            }}
-            disabled={!editingText.trim()}
-          >
-            <Text style={[styles.previewButtonText, !editingText.trim() && styles.previewButtonDisabled]}>
-              Preview
-            </Text>
-          </TouchableOpacity>
-        )}
-      </TouchableOpacity>
+        </TouchableOpacity>
+      </Animated.View>
     </Animated.View>
   );
 }
@@ -171,6 +173,26 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose }) {
   const [editingDate, setEditingDate] = useState(null);
   const [editingText, setEditingText] = useState('');
   const [isExiting, setIsExiting] = useState(false);
+  const previewButtonTranslateY = useRef(new RNAnimated.Value(200)).current; // Start off-screen
+
+  // Animate preview button based on whether there's text
+  useEffect(() => {
+    if (editingText.trim()) {
+      RNAnimated.spring(previewButtonTranslateY, {
+        toValue: 0,
+        useNativeDriver: true,
+        damping: 20,
+        stiffness: 300,
+      }).start();
+    } else {
+      RNAnimated.spring(previewButtonTranslateY, {
+        toValue: 200,
+        useNativeDriver: true,
+        damping: 20,
+        stiffness: 300,
+      }).start();
+    }
+  }, [editingText]);
 
   // Generate date slots (past 7 days, today, next 30 days)
   const generateDateSlots = () => {
@@ -218,7 +240,8 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose }) {
   const cardSize = Math.min(width * 0.75, height * 0.6);
   const cardSpacing = 64;
   const snapInterval = cardSize + cardSpacing;
-  const editCardSize = Math.min(width * 0.9, height * 0.75);
+  const editCardWidth = width - 100; // Full width minus left/right padding
+  const editCardHeight = height - 100; // Full height minus top/bottom padding
 
   // Calculate initial scroll position to today's card
   const initialScrollX = todayIndex !== -1 ? todayIndex * snapInterval : 0;
@@ -249,14 +272,24 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose }) {
   };
 
   // Handle card tap
-  const handleCardPress = (dateStr, messageText, isEditable) => {
+  const handleCardPress = (dateStr, messageText, isEditable, cardIndex) => {
     if (!isEditable) return;
-    setEditingDate(dateStr);
-    setEditingText(messageText || '');
 
+    // Scroll to the clicked card
+    if (scrollViewRef.current && cardIndex !== undefined) {
+      const scrollX = cardIndex * snapInterval;
+      scrollViewRef.current.scrollTo({ x: scrollX, animated: true });
+    }
+
+    // Wait for scroll to complete, then expand card
     setTimeout(() => {
-      textInputRefs[dateStr]?.focus();
-    }, 100);
+      setEditingDate(dateStr);
+      setEditingText(messageText || '');
+
+      setTimeout(() => {
+        textInputRefs[dateStr]?.focus();
+      }, 100);
+    }, 300); // Let scroll complete first
   };
 
   // Handle back from edit mode
@@ -274,19 +307,13 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose }) {
 
   return (
     <View style={styles.container}>
-      {/* Back button (absolute positioned) */}
-      {editingDate && (
-        <TouchableOpacity onPress={handleBackFromEdit} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Close button (absolute positioned) */}
-      {!editingDate && (
-        <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-          <Text style={styles.closeButtonText}>✕</Text>
-        </TouchableOpacity>
-      )}
+      {/* Back button - always shown in top left */}
+      <TouchableOpacity
+        onPress={editingDate ? handleBackFromEdit : handleClose}
+        style={styles.backButton}
+      >
+        <Feather name="arrow-left" size={28} color="#ffffff" />
+      </TouchableOpacity>
 
       {/* Horizontal scrolling cards */}
       <TouchableOpacity
@@ -321,7 +348,8 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose }) {
                 isEditing={isEditing}
                 isOtherCardEditing={isOtherCardEditing}
                 cardSize={cardSize}
-                editCardSize={editCardSize}
+                editCardWidth={editCardWidth}
+                editCardHeight={editCardHeight}
                 cardSpacing={cardSpacing}
                 editingText={editingText}
                 setEditingText={setEditingText}
@@ -338,6 +366,32 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose }) {
           })}
         </ScrollView>
       </TouchableOpacity>
+
+      {/* Preview button - anchored to bottom center of viewport */}
+      {editingDate && (
+        <RNAnimated.View
+          style={[
+            styles.previewButtonContainer,
+            { transform: [{ translateY: previewButtonTranslateY }] }
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.previewButton}
+            onPress={() => {
+              handleBackFromEdit();
+              onSelectDate(editingDate, editingText);
+            }}
+            disabled={!editingText.trim()}
+          >
+            <View style={styles.previewButtonContent}>
+              <Feather name="play" size={20} color="#ffffff" style={{ marginRight: 8 }} />
+              <Text style={styles.previewButtonText}>
+                Preview
+              </Text>
+            </View>
+          </TouchableOpacity>
+        </RNAnimated.View>
+      )}
     </View>
   );
 }
@@ -363,22 +417,6 @@ const styles = StyleSheet.create({
     padding: 8,
     zIndex: 100,
   },
-  backButtonText: {
-    fontSize: 16,
-    color: '#ffffff',
-    fontWeight: '400',
-  },
-  closeButton: {
-    position: 'absolute',
-    top: 50,
-    right: 50,
-    padding: 8,
-    zIndex: 100,
-  },
-  closeButtonText: {
-    fontSize: 24,
-    color: '#ffffff',
-  },
   scrollView: {
     flex: 1,
     scrollSnapType: 'x mandatory', // CSS scroll snap for web
@@ -392,7 +430,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 2,
     borderColor: '#ffffff',
-    padding: 32,
+    padding: 64,
     justifyContent: 'space-between',
   },
   cardPast: {
@@ -404,6 +442,7 @@ const styles = StyleSheet.create({
   },
   cardHeader: {
     marginBottom: 24,
+    alignItems: 'center',
   },
   cardDate: {
     fontSize: 14,
@@ -411,13 +450,14 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 12,
     letterSpacing: 1,
+    textAlign: 'center',
   },
   activeBadge: {
     backgroundColor: '#4a9eff',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
   },
   activeBadgeText: {
     fontSize: 11,
@@ -431,13 +471,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   messageInput: {
-    fontSize: 24,
-    lineHeight: 36,
+    fontSize: 32,
+    lineHeight: 60,
     color: '#ffffff',
     fontWeight: '300',
     width: '100%',
     textAlign: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 0,
     paddingVertical: 0,
     outlineStyle: 'none',
     borderWidth: 0,
@@ -451,21 +491,36 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#666',
   },
-  previewButton: {
+  previewButtonContainer: {
     position: 'absolute',
-    bottom: 24,
+    bottom: 50,
     left: 0,
     right: 0,
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    marginHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 8,
+    justifyContent: 'center',
+    zIndex: 100,
+    paddingHorizontal: 50,
+  },
+  previewButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#ffffff',
+    paddingVertical: 20,
+    paddingHorizontal: 40,
+    borderRadius: 999,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  previewButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   previewButtonText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#0a0a0a',
+    color: '#ffffff',
   },
   previewButtonDisabled: {
     opacity: 0.3,
