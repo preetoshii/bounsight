@@ -1,11 +1,14 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
 
 /**
- * CalendarView - Vertical scrolling calendar with message slots
+ * CalendarView - Horizontal scrolling card-based calendar
  */
 export function CalendarView({ scheduledMessages, onSelectDate, onClose }) {
-  // Generate date slots (past 7 days, today, next 30 days for now)
+  const { width, height } = Dimensions.get('window');
+  const scrollViewRef = useRef(null);
+
+  // Generate date slots (past 7 days, today, next 30 days)
   const generateDateSlots = () => {
     const slots = [];
     const today = new Date();
@@ -45,7 +48,7 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose }) {
   const slots = generateDateSlots();
 
   const formatDate = (dateStr, isToday) => {
-    const date = new Date(dateStr + 'T00:00:00'); // Parse as local time
+    const date = new Date(dateStr + 'T00:00:00');
     const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
     const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
@@ -59,6 +62,11 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose }) {
     return scheduledMessages[dateStr] || null;
   };
 
+  // Card dimensions
+  const cardWidth = width * 0.85; // 85% of screen width
+  const cardHeight = height * 0.7; // 70% of screen height
+  const cardSpacing = 16;
+
   return (
     <View style={styles.container}>
       {/* Header with close button */}
@@ -69,9 +77,17 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose }) {
         </TouchableOpacity>
       </View>
 
-      {/* Scrolling calendar */}
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {slots.map((slot) => {
+      {/* Horizontal scrolling cards */}
+      <ScrollView
+        ref={scrollViewRef}
+        horizontal
+        pagingEnabled={false}
+        showsHorizontalScrollIndicator={false}
+        snapToInterval={cardWidth + cardSpacing}
+        decelerationRate="fast"
+        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: (width - cardWidth) / 2 }]}
+      >
+        {slots.map((slot, index) => {
           const message = getMessageForDate(slot.date);
           const isEditable = !slot.isPast;
 
@@ -79,27 +95,55 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose }) {
             <TouchableOpacity
               key={slot.date}
               style={[
-                styles.slot,
-                slot.isPast && styles.slotPast,
-                slot.isToday && styles.slotToday,
+                styles.card,
+                { width: cardWidth, height: cardHeight },
+                slot.isPast && styles.cardPast,
+                slot.isToday && styles.cardToday,
               ]}
               onPress={() => isEditable && onSelectDate(slot.date, message?.text || '')}
               disabled={slot.isPast}
+              activeOpacity={0.9}
             >
-              <View style={styles.slotHeader}>
-                <Text style={[styles.slotDate, slot.isPast && styles.textMuted]}>
+              {/* Date header */}
+              <View style={styles.cardHeader}>
+                <Text style={[styles.cardDate, slot.isPast && styles.textMuted]}>
                   {formatDate(slot.date, slot.isToday)}
                 </Text>
-                {slot.isToday && <View style={styles.activeBadge}><Text style={styles.activeBadgeText}>ACTIVE</Text></View>}
+                {slot.isToday && (
+                  <View style={styles.activeBadge}>
+                    <Text style={styles.activeBadgeText}>ACTIVE</Text>
+                  </View>
+                )}
               </View>
 
-              <Text style={[styles.slotMessage, slot.isPast && styles.textMuted]}>
-                {message?.text ? message.text.substring(0, 60) + (message.text.length > 60 ? '...' : '') : 'Empty'}
-              </Text>
+              {/* Message preview */}
+              <View style={styles.cardContent}>
+                {message?.text ? (
+                  <Text style={[styles.messageText, slot.isPast && styles.textMuted]}>
+                    {message.text}
+                  </Text>
+                ) : (
+                  <Text style={styles.emptyText}>
+                    {slot.isPast ? 'No message' : 'Tap to add message'}
+                  </Text>
+                )}
+              </View>
+
+              {/* Edit indicator for future dates */}
+              {!slot.isPast && (
+                <View style={styles.cardFooter}>
+                  <Text style={styles.editHint}>Tap to edit</Text>
+                </View>
+              )}
             </TouchableOpacity>
           );
         })}
       </ScrollView>
+
+      {/* Scroll hint */}
+      <View style={styles.scrollHint}>
+        <Text style={styles.scrollHintText}>← Swipe to browse →</Text>
+      </View>
     </View>
   );
 }
@@ -114,7 +158,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    paddingTop: 60, // Safe area
+    paddingTop: 60,
     borderBottomWidth: 1,
     borderBottomColor: '#222',
   },
@@ -130,56 +174,83 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#ffffff',
   },
-  scrollView: {
-    flex: 1,
-  },
   scrollContent: {
-    padding: 16,
+    paddingVertical: 40,
+    gap: 16,
   },
-  slot: {
+  card: {
     backgroundColor: '#111',
-    borderRadius: 8,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#222',
-    padding: 16,
-    marginBottom: 12,
+    padding: 32,
+    marginHorizontal: 8,
+    justifyContent: 'space-between',
   },
-  slotPast: {
+  cardPast: {
     opacity: 0.5,
   },
-  slotToday: {
+  cardToday: {
     borderColor: '#4a9eff',
     borderWidth: 2,
   },
-  slotHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+  cardHeader: {
+    marginBottom: 24,
   },
-  slotDate: {
-    fontSize: 16,
+  cardDate: {
+    fontSize: 20,
     fontWeight: '400',
     color: '#ffffff',
+    marginBottom: 12,
   },
   activeBadge: {
     backgroundColor: '#4a9eff',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
   },
   activeBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
     color: '#ffffff',
     letterSpacing: 1,
   },
-  slotMessage: {
+  cardContent: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  messageText: {
+    fontSize: 18,
+    lineHeight: 28,
+    color: '#ffffff',
+    fontWeight: '300',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    fontStyle: 'italic',
+  },
+  cardFooter: {
+    marginTop: 24,
+    alignItems: 'center',
+  },
+  editHint: {
     fontSize: 14,
-    color: '#999',
-    lineHeight: 20,
+    color: '#666',
   },
   textMuted: {
+    color: '#666',
+  },
+  scrollHint: {
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  scrollHintText: {
+    fontSize: 12,
     color: '#666',
   },
 });
