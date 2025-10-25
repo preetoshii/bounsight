@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { TouchableOpacity, Animated, StyleSheet } from 'react-native';
+import { Pressable, Animated, StyleSheet } from 'react-native';
 import { playSound } from '../utils/audio';
 
 /**
@@ -65,17 +65,16 @@ export function Button({
 
   return (
     <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-      <TouchableOpacity
+      <Pressable
         onPress={handlePress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
         disabled={disabled}
-        activeOpacity={1} // Disable default opacity change since we're using scale
         style={[style, { justifyContent: 'center', alignItems: 'center' }]}
         {...otherProps}
       >
         {children}
-      </TouchableOpacity>
+      </Pressable>
     </Animated.View>
   );
 }
