@@ -302,6 +302,9 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
   const handleCardPress = (dateStr, messageText, isEditable, cardIndex) => {
     if (!isEditable) return;
 
+    // Play expand sound
+    playSound('expand-card');
+
     // Immediately expand the card for responsiveness
     setEditingDate(dateStr);
     setEditingText(messageText || '');

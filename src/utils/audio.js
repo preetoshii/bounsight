@@ -34,6 +34,7 @@ export async function playSound(name) {
       'preview': require('../sfx/preview.wav'),
       'wall-bump': require('../sfx/wall-bump.wav'),
       'click': require('../sfx/click.wav'),
+      'expand-card': require('../sfx/expand-card.wav'),
     };
 
     const source = soundMap[name];
