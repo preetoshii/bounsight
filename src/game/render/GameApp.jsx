@@ -56,26 +56,34 @@ export function GameApp() {
 
     const loadOrGenerateAudio = async () => {
       try {
+        const words = gameCore.current.message;
+
         // Try to preload existing audio
         const { loaded, failed } = await preloadMessageAudio(messageText);
 
         console.log(`✓ Audio preloaded: ${loaded.length} words`);
 
-        // If any words failed to load, generate them
-        if (failed.length > 0) {
-          console.log(`🎤 Generating missing audio for ${failed.length} word(s)...`);
+        // If NO audio loaded and we have words, or if any words failed to load, generate them
+        const needsGeneration = (loaded.length === 0 && words.length > 0) || failed.length > 0;
+
+        if (needsGeneration) {
+          console.log(`🎤 Generating missing audio for message...`);
           setAudioGenerating(true);
-          setAudioGenStatus(`Generating audio for ${failed.length} new word(s)...`);
+          setAudioGenStatus(`Checking for new words...`);
 
           const result = await generateAudioForMessage(messageText, (word, current, total) => {
             setAudioGenStatus(`Generating audio: "${word}" (${current}/${total})`);
           });
 
-          console.log(`✓ Generated audio for ${result.generated.length} word(s)`);
+          if (result.generated.length > 0) {
+            console.log(`✓ Generated audio for ${result.generated.length} word(s)`);
 
-          // Now preload the newly generated audio
-          const { loaded: newLoaded } = await preloadMessageAudio(messageText);
-          console.log(`✓ Loaded ${newLoaded.length} word audio files`);
+            // Now preload the newly generated audio
+            const { loaded: newLoaded } = await preloadMessageAudio(messageText);
+            console.log(`✓ Loaded ${newLoaded.length} word audio files`);
+          } else {
+            console.log(`✓ All words already have audio`);
+          }
 
           setAudioGenerating(false);
           setAudioGenStatus('');
