@@ -57,12 +57,17 @@ export function GameApp() {
     // Initialize physics with current dimensions
     gameCore.current = new GameCore(dimensions.width, dimensions.height);
 
-    // Preload audio for current message (with fallback generation)
-    const messageText = gameCore.current.message.join(' ');
-
+    // Wait for message to load from GitHub, THEN preload audio
     const loadOrGenerateAudio = async () => {
       try {
+        // Wait for message to load from GitHub (if not preview mode)
+        await gameCore.current.messageLoadPromise;
+
+        // NOW get the loaded message text
+        const messageText = gameCore.current.message.join(' ');
         const words = gameCore.current.message;
+
+        console.log(`🎵 Preloading audio for message: "${messageText}"`);
 
         // Try to preload existing audio
         const { loaded, failed } = await preloadMessageAudio(messageText);

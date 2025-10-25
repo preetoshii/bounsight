@@ -119,7 +119,10 @@ export class GameCore {
 
     // Load current message from messages.json if not in preview mode
     if (!customMessage) {
-      this.loadCurrentMessage();
+      this.messageLoadPromise = this.loadCurrentMessage();
+    } else {
+      // Preview mode - message is already set, resolve immediately
+      this.messageLoadPromise = Promise.resolve();
     }
 
     // Set up collision event handler
