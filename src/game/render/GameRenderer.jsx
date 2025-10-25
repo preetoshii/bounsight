@@ -41,10 +41,9 @@ export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], 
             // Calculate progress through the animation (0 to 1)
             const progress = timeSinceBounce / deformConfig.duration;
 
-            // Apply oscillation (like a guitar string or rubber band)
-            // Uses damped sine wave for spring-back effect
-            const frequency = deformConfig.oscillations * Math.PI * 2;
-            const dampingFactor = Math.pow(1 - progress, 1 / deformConfig.damping);
+            // Apply oscillation with exponential decay (real spring physics)
+            const frequency = deformConfig.frequency * Math.PI * 2;
+            const dampingFactor = Math.exp(-deformConfig.damping * progress * 5); // Exponential decay
             const oscillation = Math.sin(frequency * progress) * dampingFactor;
 
             // Calculate bend amount with oscillation
@@ -111,9 +110,9 @@ export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], 
             // Calculate progress through creation animation
             const progress = timeSinceCreation / creationConfig.duration;
 
-            // Apply oscillation from center
-            const frequency = creationConfig.oscillations * Math.PI * 2;
-            const dampingFactor = Math.pow(1 - progress, 1 / creationConfig.damping);
+            // Apply oscillation from center with exponential decay
+            const frequency = creationConfig.frequency * Math.PI * 2;
+            const dampingFactor = Math.exp(-creationConfig.damping * progress * 5); // Exponential decay
             const oscillation = Math.sin(frequency * progress) * dampingFactor;
 
             // Bend amount for creation

@@ -7,96 +7,94 @@
 export const config = {
   // === PHYSICS ===
   physics: {
-    // Gravity strength (0.5 = floaty, 2.0 = heavy)
-    gravityY: 1.0,
+    gravityY: 1.0,            // Gravity strength (0.5 = floaty, 2.0 = heavy)
 
-    // Mascot physics properties
+    // Mascot (ball) physics properties
     mascot: {
-      radius: 30,
-      restitution: 0.6,      // Bounciness (0-1)
-      friction: 0.01,         // Surface friction
-      frictionAir: 0.005,     // Air resistance (lower = less terminal velocity effect)
-      mass: 1,
+      radius: 30,             // Ball radius in pixels
+      restitution: 0.6,       // Bounciness on collision (0 = no bounce, 1 = perfect bounce)
+      friction: 0.01,         // Surface friction when sliding (0 = frictionless, 1 = sticky)
+      frictionAir: 0.005,     // Air resistance affecting terminal velocity (lower = falls faster)
+      mass: 1,                // Mass affects force calculations (default: 1)
     },
 
-    // Velocity limits (safety valve)
-    maxVelocityX: 30,
-    maxVelocityY: 50,
+    // Velocity limits (safety valve to prevent extreme speeds)
+    maxVelocityX: 30,         // Maximum horizontal velocity in pixels/frame
+    maxVelocityY: 50,         // Maximum vertical velocity in pixels/frame
   },
 
   // === GELATO (SPRINGBOARDS) ===
   gelato: {
-    maxLength: 150,           // Maximum distance between start and end points
-    thickness: 4,             // Visual thickness of the line
-    springBoost: 2.5,         // Bounce multiplier (1.0 = normal bounce, 2.5 = balanced trampoline)
-    maxActiveGelatos: 1,      // How many can exist at once
-    color: '#FFFFFF',
+    maxLength: 150,           // Maximum line length in pixels (enforced during drawing)
+    thickness: 4,             // Visual line thickness in pixels
+    springBoost: 2.5,         // Trampoline bounce multiplier (1.0 = normal physics, 2.5 = 250% bounce back)
+    maxActiveGelatos: 1,      // How many Gelatos can exist simultaneously (currently: 1)
+    color: '#FFFFFF',         // Line color (hex or rgba)
 
     // Visual deformation (trampoline effect on bounce)
     deformation: {
-      maxBendAmount: 20,      // Maximum bend in pixels (higher = more dramatic)
-      duration: 400,          // Total animation duration in ms
-      oscillations: 3,        // Number of spring-back oscillations (0 = no springiness, 3 = bouncy!)
-      damping: 0.6,           // How much each oscillation reduces (0-1, higher = more damping)
+      maxBendAmount: 20,      // Maximum bend distance in pixels (higher = more dramatic wobble)
+      duration: 400,          // Total animation duration in milliseconds
+      frequency: 3,           // Oscillation speed (higher = faster/snappier, lower = slower/gooier)
+      damping: 0.6,           // Spring damping coefficient (0 = no decay, 1 = heavy decay, uses exponential)
     },
 
-    // Creation animation (pop-in effect)
+    // Creation animation (pop-in effect when Gelato spawns)
     creation: {
-      maxBendAmount: 15,      // Maximum bend on creation (from center)
-      duration: 300,          // How long the pop-in animation lasts
-      oscillations: 2,        // Number of wobbles on creation
-      damping: 0.5,           // How quickly the wobble dampens
+      maxBendAmount: 15,      // Maximum bend in pixels when appearing (from center of line)
+      duration: 300,          // How long the pop-in animation lasts in milliseconds
+      frequency: 2,           // Oscillation speed (higher = faster wobble, lower = slower/gooier)
+      damping: 0.5,           // Spring damping coefficient (lower = more bouncy, higher = settles faster)
     },
 
-    // Destruction on bounce
-    fadeOutDuration: 500,     // How long Gelato takes to fade out after bounce (ms)
+    // Destruction animation (fade-out on bounce)
+    fadeOutDuration: 500,     // How long Gelato takes to fade out after bounce in milliseconds
   },
 
   // === BOUNCING ===
   bounce: {
-    minIntervalMs: 100,       // Debounce timer to prevent double-bouncing
+    minIntervalMs: 100,       // Debounce timer in milliseconds to prevent double-bouncing on same Gelato
   },
 
-  // === WALLS ===
+  // === WALLS (Screen Boundaries) ===
   walls: {
-    behavior: 'bounce',       // 'bounce' or 'wrap'
-    restitution: 0.5,         // Wall bounciness (if behavior is 'bounce')
-    thickness: 5,             // Thickness of boundary walls in pixels
-    visible: false,           // Whether to show walls visually (false = invisible boundaries)
+    behavior: 'bounce',       // Boundary behavior: 'bounce' (reflect) or 'wrap' (teleport to other side)
+    restitution: 0.5,         // Wall bounciness (0 = absorbs energy, 1 = perfect bounce)
+    thickness: 5,             // Thickness of boundary walls in pixels (affects physics collision edge)
+    visible: false,           // Whether to render walls visually (false = invisible boundaries at screen edges)
   },
 
-  // === HAPTICS ===
+  // === HAPTICS (Mobile vibration feedback) ===
   haptics: {
-    gelatoPlaced: 'light',    // Haptic when drawing a line
-    bounce: 'medium',         // Haptic on bounce/word reveal
-    combo: 'success',         // Haptic for tall combo (optional feature)
+    gelatoPlaced: 'light',    // Haptic feedback when drawing/placing a Gelato ('light', 'medium', 'heavy')
+    bounce: 'medium',         // Haptic feedback on bounce/word reveal
+    combo: 'success',         // Haptic for combo achievements (future feature)
   },
 
-  // === AUDIO ===
+  // === AUDIO (Not yet implemented) ===
   audio: {
-    voiceVolume: 1.0,         // Voice playback volume (0-1)
-    sfxVolume: 0.3,           // Bounce SFX volume (0-1)
-    duckingSfx: true,         // Lower SFX when voice plays
+    voiceVolume: 1.0,         // Voice playback volume for word narration (0 = mute, 1 = full)
+    sfxVolume: 0.3,           // Sound effects volume for bounces (0 = mute, 1 = full)
+    duckingSfx: true,         // Whether to lower SFX volume when voice plays
   },
 
   // === VISUALS ===
   visuals: {
-    backgroundColor: '#0a0a0a',   // Dark mode background
-    wordColor: '#FFFFFF',
-    wordFontSize: 32,
-    wordFadeMs: 1500,             // How long word stays on screen
+    backgroundColor: '#0a0a0a',   // Canvas background color (dark mode)
+    wordColor: '#FFFFFF',         // Text color for revealed words (future feature)
+    wordFontSize: 32,             // Font size for revealed words in pixels
+    wordFadeMs: 1500,             // How long words stay visible on screen in milliseconds
   },
 
   // === DRAWING ===
   drawing: {
-    // Approach: 'continuous' or 'segmented' (TBD through experimentation)
-    approach: 'continuous',
+    approach: 'continuous',       // Drawing method: 'continuous' (smooth path) or 'segmented' (snap to grid)
 
-    // For segmented approach
-    segmentTriggerDistance: 10,   // Distance finger moves before printing new segment
+    // For segmented approach (not currently used)
+    segmentTriggerDistance: 10,   // Distance in pixels finger must move before creating new segment
 
-    // Preview visual
-    previewColor: 'rgba(255, 255, 255, 0.5)',
-    previewThickness: 2,
+    // Preview visual (dotted line while drawing)
+    previewColor: 'rgba(255, 255, 255, 0.5)',  // Preview line color with transparency
+    previewThickness: 2,          // Preview line thickness in pixels (not currently used, uses gelato.thickness)
   },
 };
