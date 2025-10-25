@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Platform, Text, ActivityIndicator } from 'react-native';
 import { LoadSkiaWeb } from '@shopify/react-native-skia/lib/module/web';
+import { setupAudio } from './src/utils/audio';
 
 // Load Skia on web immediately (before any Skia imports)
 let skiaLoadPromise = null;
@@ -24,6 +25,10 @@ export default function App() {
           await skiaLoadPromise;
           console.log('✓ Skia loaded successfully');
         }
+
+        // Setup audio
+        await setupAudio();
+        console.log('✓ Audio setup complete');
 
         // Now dynamically import GameApp (which imports Skia components)
         const module = await import('./src/game/render/GameApp');

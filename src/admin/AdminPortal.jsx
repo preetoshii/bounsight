@@ -5,6 +5,7 @@ import { CalendarView } from './CalendarView';
 import { PreviewMode } from './PreviewMode';
 import { Confirmation } from './Confirmation';
 import { fetchMessages, saveMessage as saveMessageToGitHub } from './githubApi';
+import { playSound } from '../utils/audio';
 
 /**
  * AdminPortal - Root component for admin interface
@@ -163,17 +164,21 @@ export function AdminPortal({ onClose }) {
 
   // Handle back button - simple and direct
   const handleBack = () => {
+    playSound('back-button');
+    console.log('🔙 Back pressed. currentView:', currentView, 'editingDate:', editingDate);
+
     if (currentView === 'confirmation') {
-      // Confirmation → Preview
+      console.log('→ Going to preview');
       setCurrentView('preview');
     } else if (currentView === 'preview') {
-      // Preview → Calendar (with card still expanded)
+      console.log('→ Going back to calendar from preview');
       backFromPreview();
     } else if (currentView === 'calendar' && editingDate) {
-      // Calendar with expanded card → Collapse card
+      console.log('→ Collapsing card');
       exitEdit();
     } else if (currentView === 'calendar') {
-      // Calendar (normal) → Close portal
+      console.log('→ Closing portal');
+      playSound('card-slide');
       onClose();
     }
   };

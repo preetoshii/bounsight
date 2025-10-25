@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, TextInput, Animated as RNAnimated } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, withDelay } from 'react-native-reanimated';
 import { Feather } from '@expo/vector-icons';
+import { playSound } from '../utils/audio';
 
 /**
  * Individual Card Item with Reanimated animations
@@ -299,6 +300,9 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
     setEditingDate(dateStr);
     setEditingText(messageText || '');
 
+    // Notify AdminPortal that we're entering edit mode
+    onSelectDate(dateStr, messageText || '');
+
     // Scroll to the clicked card (happens simultaneously with expansion)
     if (scrollViewRef.current && cardIndex !== undefined) {
       const scrollX = cardIndex * snapInterval;
@@ -318,6 +322,7 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
 
   // Handle preview button press - call onPreview to navigate to preview mode
   const handlePreview = () => {
+    playSound('preview');
     onPreview();
   };
 

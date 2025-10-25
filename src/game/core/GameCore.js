@@ -1,5 +1,6 @@
 import Matter from 'matter-js';
 import { config } from '../../config';
+import { playSound } from '../../utils/audio';
 
 /**
  * GameCore - Physics engine using Matter.js
@@ -227,6 +228,9 @@ export class GameCore {
   handleLoss() {
     this.hasLost = true;
 
+    // Play loss sound
+    playSound('loss');
+
     // Reset word index to start message from beginning
     this.wordIndex = 0;
     this.currentWord = null;
@@ -296,6 +300,9 @@ export class GameCore {
           y: currentVelocity.y + normalY * boostVelocity,
         });
 
+        // Play gelato bounce sound
+        playSound('gelato-bounce');
+
         // Store impact data for visual deformation
         this.bounceImpact = {
           x: mascotBody.position.x,
@@ -306,6 +313,12 @@ export class GameCore {
 
         // Reveal next word (Milestone 3)
         this.revealNextWord();
+      }
+
+      // Check if mascot hit a wall/boundary
+      const wallBody = bodyA.label === 'wall' ? bodyA : bodyB.label === 'wall' ? bodyB : null;
+      if (mascotBody && wallBody) {
+        playSound('wall-bump');
       }
     }
   }
@@ -382,6 +395,9 @@ export class GameCore {
     );
 
     Matter.World.add(this.world, this.gelato);
+
+    // Play gelato creation sound
+    playSound('gelato-create');
 
     // Store line data for rendering
     this.gelatoLineData = { startX, startY, endX, endY };

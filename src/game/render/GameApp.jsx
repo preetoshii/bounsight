@@ -6,6 +6,7 @@ import { GameRenderer } from './GameRenderer';
 import { GameCore } from '../core/GameCore';
 import { config } from '../../config';
 import { AdminPortal } from '../../admin/AdminPortal';
+import { playSound } from '../../utils/audio';
 
 /**
  * GameApp - Main game component
@@ -176,6 +177,7 @@ export function GameApp() {
 
   // Admin portal toggle functions
   const openAdmin = () => {
+    playSound('card-slide');
     setShowAdmin(true);
     Animated.parallel([
       Animated.timing(gameOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
