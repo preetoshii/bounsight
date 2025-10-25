@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Canvas, Circle, Fill, Line, Rect, vec, DashPathEffect, Path, Skia } from '@shopify/react-native-skia';
+import { Canvas, Circle, Fill, Line, Rect, vec, DashPathEffect, Path, Skia, Group } from '@shopify/react-native-skia';
 import { Text, View, StyleSheet, Animated } from 'react-native';
 import { config } from '../../config';
 
@@ -97,7 +97,7 @@ function WaveLetter({ letter, index, totalLetters }) {
  * GameRenderer - Unified Skia renderer for all platforms
  * This same code works on Web, iOS, and Android
  */
-export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], lines = [], currentPath = null, bounceImpact = null, gelatoCreationTime = null, currentWord = null, mascotVelocityY = 0 }) {
+export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], lines = [], currentPath = null, bounceImpact = null, gelatoCreationTime = null, currentWord = null, mascotVelocityY = 0, squashStretch = { scaleX: 1, scaleY: 1 } }) {
   // Calculate word opacity based on configured fade mode
   let wordOpacity = 0;
 
@@ -137,6 +137,22 @@ export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], 
         wordOpacity = 0;
       }
     }
+  }
+
+  // Calculate word vertical offset based on ball velocity
+  // Word starts high (-60px) and falls down with the ball as velocity increases
+  const startOffset = -60; // Start position (negative = up)
+  const maxDownwardOffset = 40; // How far it can fall from start
+  const maxVelocity = 15; // approximate max velocity for mapping
+
+  let wordVerticalOffset = 0;
+  if (currentWord && mascotVelocityY > 0) {
+    // Ball is falling (positive velocity), move word down from start position
+    const fallProgress = Math.min(1, mascotVelocityY / maxVelocity);
+    wordVerticalOffset = startOffset + (fallProgress * maxDownwardOffset);
+  } else if (currentWord) {
+    // Ball is rising or at peak, keep word at start position (high up)
+    wordVerticalOffset = startOffset;
   }
 
   return (
@@ -318,21 +334,38 @@ export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], 
         );
       })()}
 
-      {/* Mascot circle (now physics-based!) */}
-      <Circle
-        cx={mascotX}
-        cy={mascotY}
-        r={config.physics.mascot.radius}
-        color="white"
-        style="stroke"
-        strokeWidth={2}
-      />
+      {/* Mascot circle (now physics-based with squash and stretch!) */}
+      <Group
+        transform={[
+          { translateX: mascotX },
+          { translateY: mascotY },
+          { scaleX: squashStretch.scaleX },
+          { scaleY: squashStretch.scaleY },
+          { translateX: -mascotX },
+          { translateY: -mascotY },
+        ]}
+      >
+        <Circle
+          cx={mascotX}
+          cy={mascotY}
+          r={config.physics.mascot.radius}
+          color="white"
+          style="stroke"
+          strokeWidth={2}
+        />
+      </Group>
 
       </Canvas>
 
       {/* Word overlay with Mexican wave animation */}
       {currentWord && wordOpacity > 0 && (
-        <View style={styles.wordContainer} pointerEvents="none">
+        <View
+          style={[
+            styles.wordContainer,
+            { transform: [{ translateY: wordVerticalOffset }] }
+          ]}
+          pointerEvents="none"
+        >
           <WaveText text={currentWord.text} opacity={wordOpacity} />
         </View>
       )}

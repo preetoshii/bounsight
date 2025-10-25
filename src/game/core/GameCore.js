@@ -490,6 +490,37 @@ export class GameCore {
   }
 
   /**
+   * Get squash and stretch values for mascot based on velocity
+   * Returns { scaleX, scaleY } for animation
+   */
+  getSquashStretch() {
+    const velocityY = this.mascot.velocity.y;
+    const velocityX = this.mascot.velocity.x;
+
+    // Calculate total speed for squash/stretch intensity
+    const speed = Math.sqrt(velocityX * velocityX + velocityY * velocityY);
+    const maxSpeed = 15; // Threshold for maximum squash/stretch
+    const intensity = Math.min(speed / maxSpeed, 1); // 0 to 1
+
+    // Squash when moving fast vertically (down = positive velocity)
+    // Stretch when moving up or horizontally fast
+    const isMovingDown = velocityY > 2;
+    const isMovingUp = velocityY < -2;
+
+    if (isMovingUp) {
+      // Stretch: narrower and taller
+      const stretchAmount = 0.15 * intensity; // Max 15% stretch
+      return {
+        scaleX: 1 - stretchAmount * 0.7,
+        scaleY: 1 + stretchAmount,
+      };
+    }
+
+    // No squash/stretch at low speeds
+    return { scaleX: 1, scaleY: 1 };
+  }
+
+  /**
    * Get Gelato line data for rendering
    */
   getGelatoLineData() {

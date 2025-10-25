@@ -34,6 +34,7 @@ export function GameApp() {
   const lastGelatoData = useRef(null); // Track last gelato data to detect changes
   const currentWord = useRef(null); // Current word being displayed
   const mascotVelocityY = useRef(0); // Current Y velocity of mascot
+  const squashStretch = useRef({ scaleX: 1, scaleY: 1 }); // Squash/stretch for ball deformation
 
   // Simple line drawing state
   const [lines, setLines] = useState([]);
@@ -130,6 +131,7 @@ export function GameApp() {
       gelatoCreationTime.current = gameCore.current.getGelatoCreationTime();
       currentWord.current = gameCore.current.getCurrentWord();
       mascotVelocityY.current = gameCore.current.getMascotVelocityY();
+      squashStretch.current = gameCore.current.getSquashStretch();
 
       // Sync lines with GameCore (updates when gelato destroyed after fade)
       const currentGelatoData = gameCore.current.getGelatoLineData();
@@ -333,6 +335,7 @@ export function GameApp() {
             gelatoCreationTime={gelatoCreationTime.current}
             currentWord={currentWord.current}
             mascotVelocityY={mascotVelocityY.current}
+            squashStretch={squashStretch.current}
           />
 
           {/* Admin Button - Feather Icon */}
