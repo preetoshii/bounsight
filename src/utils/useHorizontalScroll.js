@@ -26,6 +26,10 @@ export function useHorizontalScroll(scrollViewRef) {
         // Only handle vertical wheel events (ignore horizontal trackpad gestures)
         if (e.deltaY === 0) return;
 
+        // Ignore if there's significant horizontal movement (trackpad)
+        // Trackpads send both deltaX and deltaY, mouse wheels only send deltaY
+        if (Math.abs(e.deltaX) > 0) return;
+
         // Check if we can scroll in the requested direction
         const canScrollLeft = el.scrollLeft > 0 && e.deltaY < 0;
         const canScrollRight = el.scrollLeft < (el.scrollWidth - el.clientWidth) && e.deltaY > 0;
