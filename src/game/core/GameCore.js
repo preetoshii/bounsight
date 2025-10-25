@@ -517,30 +517,51 @@ export class GameCore {
 
   /**
    * Load current message from messages.json
-   * Fetches from GitHub or local fallback
+   * Fetches from GitHub API (always fresh on refresh!)
    */
   async loadCurrentMessage() {
     try {
-      // Try to fetch from local server first (for development)
-      const response = await fetch('/messages.json');
+      // Get GitHub token from environment
+      const token = process.env.EXPO_PUBLIC_GITHUB_TOKEN;
+
+      // Build GitHub API URL with cache buster to force fresh fetch
+      const cacheBuster = Date.now();
+      const url = `https://api.github.com/repos/preetoshii/bounsight/contents/messages.json?ref=master&_=${cacheBuster}`;
+
+      const headers = {
+        'Accept': 'application/vnd.github.v3+json',
+      };
+
+      // Add authorization if token is available
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(url, { headers });
 
       if (!response.ok) {
-        console.warn('Could not load messages.json, using fallback');
+        console.warn('Could not load messages.json from GitHub API, using fallback');
         return;
       }
 
-      const data = await response.json();
+      const apiData = await response.json();
+
+      // GitHub API returns base64-encoded content
+      const decodedContent = atob(apiData.content);
+      const data = JSON.parse(decodedContent);
+
       const currentDate = data.current;
       const currentMessage = data.messages[currentDate];
 
       if (currentMessage && currentMessage.words) {
         this.message = currentMessage.words;
-        console.log('Loaded message from messages.json:', this.message);
+        console.log('✅ Loaded fresh message from GitHub:', this.message);
       } else {
         console.warn('No message found for current date:', currentDate);
       }
     } catch (error) {
-      console.warn('Failed to load current message:', error);
+      console.warn('Failed to load current message from GitHub:', error);
+      console.warn('Using fallback message');
       // Keep using the fallback message set in constructor
     }
   }
