@@ -14,18 +14,45 @@ export function AdminPortal({ onClose }) {
   const [draftMessage, setDraftMessage] = useState(''); // Message being composed
   const [scheduledMessages, setScheduledMessages] = useState({}); // All scheduled messages
 
+  // Animated values for view transitions
+  const calendarOpacity = React.useRef(new Animated.Value(1)).current;
+  const previewOpacity = React.useRef(new Animated.Value(0)).current;
+
   // Navigate to preview mode directly from calendar
   const openPreview = (date, message) => {
     setEditingDate(date);
     setDraftMessage(message);
-    setCurrentView('preview');
+
+    // Fade out calendar first, then fade in preview
+    Animated.timing(calendarOpacity, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      setCurrentView('preview');
+      Animated.timing(previewOpacity, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    });
   };
 
-  // Navigate back to calendar
+  // Navigate back to calendar (keep editing state)
   const backToCalendar = () => {
-    setCurrentView('calendar');
-    setEditingDate(null);
-    setDraftMessage('');
+    // Fade out preview first, then fade in calendar
+    Animated.timing(previewOpacity, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      setCurrentView('calendar');
+      Animated.timing(calendarOpacity, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    });
   };
 
   // Save message (for future dates)
@@ -56,22 +83,26 @@ export function AdminPortal({ onClose }) {
 
   return (
     <View style={styles.container}>
-      {currentView === 'calendar' && (
+      {/* Calendar View - always rendered for smooth transitions */}
+      <Animated.View style={[styles.fullScreen, { opacity: calendarOpacity, pointerEvents: currentView === 'calendar' ? 'auto' : 'none' }]}>
         <CalendarView
           scheduledMessages={scheduledMessages}
           onSelectDate={openPreview}
           onClose={onClose}
+          initialEditingDate={editingDate}
+          initialEditingText={draftMessage}
         />
-      )}
+      </Animated.View>
 
-      {currentView === 'preview' && (
+      {/* Preview Mode - always rendered for smooth transitions */}
+      <Animated.View style={[styles.fullScreen, { opacity: previewOpacity, pointerEvents: currentView === 'preview' ? 'auto' : 'none' }]}>
         <PreviewMode
           message={draftMessage}
           isActive={isEditingToday()}
           onBack={backToCalendar}
           onSave={isEditingToday() ? sendNow : saveMessage}
         />
-      )}
+      </Animated.View>
 
       {currentView === 'confirmation' && (
         <Confirmation
@@ -87,5 +118,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0a0a0a',
+  },
+  fullScreen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
 });

@@ -151,12 +151,6 @@ function CardItem({
           />
         </View>
 
-        {/* Edit icon for editable dates (hidden when editing) */}
-        {!slot.isPast && !isEditing && (
-          <View style={styles.editIcon}>
-            <Text style={styles.editIconText}>✎</Text>
-          </View>
-        )}
         </TouchableOpacity>
       </Animated.View>
     </Animated.View>
@@ -166,12 +160,12 @@ function CardItem({
 /**
  * CalendarView - Horizontal scrolling card-based calendar
  */
-export function CalendarView({ scheduledMessages, onSelectDate, onClose }) {
+export function CalendarView({ scheduledMessages, onSelectDate, onClose, initialEditingDate, initialEditingText }) {
   const { width, height } = Dimensions.get('window');
   const scrollViewRef = useRef(null);
   const textInputRefs = useRef({}).current;
-  const [editingDate, setEditingDate] = useState(null);
-  const [editingText, setEditingText] = useState('');
+  const [editingDate, setEditingDate] = useState(initialEditingDate || null);
+  const [editingText, setEditingText] = useState(initialEditingText || '');
   const [isExiting, setIsExiting] = useState(false);
   const previewButtonTranslateY = useRef(new RNAnimated.Value(200)).current; // Start off-screen
 
@@ -305,6 +299,12 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose }) {
     onClose();
   };
 
+  // Handle preview button press - just navigate, AdminPortal handles fade
+  const handlePreview = () => {
+    // Don't call handleBackFromEdit - let AdminPortal handle the transition
+    onSelectDate(editingDate, editingText);
+  };
+
   return (
     <View style={styles.container}>
       {/* Back button - always shown in top left */}
@@ -321,6 +321,7 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose }) {
         activeOpacity={1}
         onPress={editingDate ? handleBackFromEdit : undefined}
         disabled={!editingDate}
+        pointerEvents="box-none"
       >
         <ScrollView
           ref={scrollViewRef}
@@ -377,10 +378,7 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose }) {
         >
           <TouchableOpacity
             style={styles.previewButton}
-            onPress={() => {
-              handleBackFromEdit();
-              onSelectDate(editingDate, editingText);
-            }}
+            onPress={handlePreview}
             disabled={!editingText.trim()}
           >
             <View style={styles.previewButtonContent}>
@@ -481,15 +479,6 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     outlineStyle: 'none',
     borderWidth: 0,
-  },
-  editIcon: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-  },
-  editIconText: {
-    fontSize: 20,
-    color: '#666',
   },
   previewButtonContainer: {
     position: 'absolute',

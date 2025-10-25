@@ -216,19 +216,22 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     position: 'absolute',
-    bottom: 40,
+    bottom: 50,
     left: '50%',
-    transform: [{ translateX: -80 }], // Center horizontally (half of width)
+    transform: [{ translateX: -100 }], // Center horizontally
     backgroundColor: '#ffffff',
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 8,
-    minWidth: 160,
+    borderWidth: 2,
+    borderColor: '#0a0a0a',
+    paddingHorizontal: 40,
+    paddingVertical: 20,
+    borderRadius: 999,
+    minWidth: 200,
+    maxWidth: 400,
     alignItems: 'center',
   },
   saveButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#0a0a0a',
   },
 });
