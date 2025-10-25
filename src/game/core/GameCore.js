@@ -101,6 +101,20 @@ export class GameCore {
         y: Math.sign(velocity.y) * config.physics.maxVelocityY,
       });
     }
+
+    // Clean up Gelato after fade completes
+    if (this.bounceImpact && this.bounceImpact.timestamp) {
+      const timeSinceBounce = Date.now() - this.bounceImpact.timestamp;
+      if (timeSinceBounce >= config.gelato.fadeOutDuration) {
+        // Fade is complete - remove Gelato data
+        if (this.gelato) {
+          Matter.World.remove(this.world, this.gelato);
+          this.gelato = null;
+        }
+        this.gelatoLineData = null;
+        this.bounceImpact = null;
+      }
+    }
   }
 
   /**

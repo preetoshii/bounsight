@@ -26,11 +26,17 @@ export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], 
 
       {/* Draw all completed lines (Gelatos) with deformation effect */}
       {lines.map((line, index) => {
-        // Check if we should apply deformation to this line
+        // Check if we should apply deformation or fade to this line
         if (bounceImpact && bounceImpact.timestamp) {
           const timeSinceBounce = Date.now() - bounceImpact.timestamp;
           const deformConfig = config.gelato.deformation;
+          const fadeOutDuration = config.gelato.fadeOutDuration;
 
+          // Calculate fade out opacity (independent of deformation)
+          const fadeProgress = Math.min(timeSinceBounce / fadeOutDuration, 1);
+          const opacity = 1 - fadeProgress;
+
+          // Apply deformation if still within deformation duration
           if (timeSinceBounce < deformConfig.duration) {
             // Calculate progress through the animation (0 to 1)
             const progress = timeSinceBounce / deformConfig.duration;
@@ -76,15 +82,27 @@ export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], 
               <Path
                 key={index}
                 path={path}
-                color="white"
+                color={`rgba(255, 255, 255, ${opacity})`}
                 style="stroke"
                 strokeWidth={config.gelato.thickness}
               />
             );
           }
+
+          // Still fading but no longer deforming - draw straight line with fade
+          return (
+            <Line
+              key={index}
+              p1={vec(line.startX, line.startY)}
+              p2={vec(line.endX, line.endY)}
+              color={`rgba(255, 255, 255, ${opacity})`}
+              style="stroke"
+              strokeWidth={config.gelato.thickness}
+            />
+          );
         }
 
-        // No deformation - draw straight line
+        // No deformation or fade - draw normal line
         return (
           <Line
             key={index}

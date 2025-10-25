@@ -39,6 +39,9 @@ export const config = {
       oscillations: 2,        // Number of spring-back oscillations (0 = no springiness, 2 = rubber band)
       damping: 0.6,           // How much each oscillation reduces (0-1, higher = more damping)
     },
+
+    // Destruction on bounce
+    fadeOutDuration: 500,     // How long Gelato takes to fade out after bounce (ms)
   },
 
   // === BOUNCING ===

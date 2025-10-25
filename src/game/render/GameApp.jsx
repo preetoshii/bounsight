@@ -20,6 +20,7 @@ export function GameApp() {
   const mascotPos = useRef({ x: width / 2, y: 100 });
   const obstacles = useRef([]);
   const bounceImpact = useRef(null); // Bounce impact data for visual deformation
+  const lastGelatoData = useRef(null); // Track last gelato data to detect changes
 
   // Simple line drawing state
   const [lines, setLines] = useState([]);
@@ -46,6 +47,13 @@ export function GameApp() {
       mascotPos.current = gameCore.current.getMascotPosition();
       obstacles.current = gameCore.current.getObstacles();
       bounceImpact.current = gameCore.current.getBounceImpact();
+
+      // Sync lines with GameCore (updates when gelato destroyed after fade)
+      const currentGelatoData = gameCore.current.getGelatoLineData();
+      if (currentGelatoData !== lastGelatoData.current) {
+        lastGelatoData.current = currentGelatoData;
+        setLines(currentGelatoData ? [currentGelatoData] : []);
+      }
 
       // Force re-render
       forceUpdate(n => n + 1);
