@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-nati
 import { GameRenderer } from '../game/render/GameRenderer';
 import { GameCore } from '../game/core/GameCore';
 import { config } from '../config';
+import { preloadMessageAudio } from '../services/audioPlayer';
 
 /**
  * PreviewMode - Game preview with draft message and overlay controls
@@ -31,6 +32,18 @@ export function PreviewMode({ message, isActive, onSave }) {
   useEffect(() => {
     // Create GameCore with custom preview message
     gameCore.current = new GameCore(dimensions.width, dimensions.height, message);
+
+    // Preload audio for preview message
+    if (message && message.trim()) {
+      preloadMessageAudio(message).then(({ loaded, failed }) => {
+        console.log(`✓ Preview audio preloaded: ${loaded.length} words`);
+        if (failed.length > 0) {
+          console.warn(`⚠️ Failed to load preview audio for ${failed.length} word(s):`, failed);
+        }
+      }).catch(error => {
+        console.error('Failed to preload preview audio:', error);
+      });
+    }
 
     let animationFrameId;
     let lastTime = performance.now();

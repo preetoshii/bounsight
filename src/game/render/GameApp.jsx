@@ -7,6 +7,7 @@ import { GameCore } from '../core/GameCore';
 import { config } from '../../config';
 import { AdminPortal } from '../../admin/AdminPortal';
 import { playSound } from '../../utils/audio';
+import { preloadMessageAudio } from '../../services/audioPlayer';
 
 /**
  * GameApp - Main game component
@@ -44,6 +45,17 @@ export function GameApp() {
   useEffect(() => {
     // Initialize physics with current dimensions
     gameCore.current = new GameCore(dimensions.width, dimensions.height);
+
+    // Preload audio for current message
+    const messageText = gameCore.current.message.join(' ');
+    preloadMessageAudio(messageText).then(({ loaded, failed }) => {
+      console.log(`✓ Audio preloaded: ${loaded.length} words`);
+      if (failed.length > 0) {
+        console.warn(`⚠️ Failed to load audio for ${failed.length} word(s):`, failed);
+      }
+    }).catch(error => {
+      console.error('Failed to preload message audio:', error);
+    });
 
     let animationFrameId;
     let lastTime = performance.now();
