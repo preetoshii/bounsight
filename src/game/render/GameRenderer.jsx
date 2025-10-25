@@ -38,42 +38,38 @@ function WaveLetter({ letter, index, totalLetters }) {
     // Stagger the animation based on letter index
     const delayBetweenLetters = 120; // 120ms delay between each letter (slower wave)
     const initialDelay = index * delayBetweenLetters;
-    const waitAfterWave = (totalLetters - index - 1) * delayBetweenLetters;
 
-    const waveAnimation = Animated.loop(
-      Animated.sequence([
-        // Wait for this letter's turn
-        Animated.delay(initialDelay),
-        // Wave up (subtle and slow)
-        Animated.parallel([
-          Animated.timing(translateY, {
-            toValue: -8,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scale, {
-            toValue: 1.08,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-        ]),
-        // Wave down (subtle and slow)
-        Animated.parallel([
-          Animated.timing(translateY, {
-            toValue: 0,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-          Animated.timing(scale, {
-            toValue: 1,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-        ]),
-        // Wait for other letters to finish their wave
-        Animated.delay(waitAfterWave),
-      ])
-    );
+    // Wave only once on reveal - no loop!
+    const waveAnimation = Animated.sequence([
+      // Wait for this letter's turn
+      Animated.delay(initialDelay),
+      // Wave up (subtle and slow)
+      Animated.parallel([
+        Animated.timing(translateY, {
+          toValue: -8,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 1.08,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+      ]),
+      // Wave down (subtle and slow)
+      Animated.parallel([
+        Animated.timing(translateY, {
+          toValue: 0,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]);
 
     waveAnimation.start();
 
