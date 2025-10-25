@@ -63,6 +63,9 @@ export class GameCore {
 
     // Store obstacles for rendering
     this.obstacles = [ground, leftWall, rightWall];
+
+    // Track Gelatos (player-drawn springboards)
+    this.gelato = null; // Only one Gelato at a time (maxActiveGelatos = 1)
   }
 
   /**
@@ -94,6 +97,79 @@ export class GameCore {
       height: body.bounds.max.y - body.bounds.min.y,
       angle: body.angle,
     }));
+  }
+
+  /**
+   * Create a Gelato (springboard) from a drawn line
+   * Returns the line data if created, null if max length exceeded
+   */
+  createGelato(startX, startY, endX, endY) {
+    // Check max length constraint
+    const dx = endX - startX;
+    const dy = endY - startY;
+    const length = Math.sqrt(dx * dx + dy * dy);
+
+    if (length > config.gelato.maxLength) {
+      // Clamp to max length
+      const scale = config.gelato.maxLength / length;
+      endX = startX + dx * scale;
+      endY = startY + dy * scale;
+    }
+
+    // Destroy previous Gelato if exists (only one at a time)
+    if (this.gelato) {
+      Matter.World.remove(this.world, this.gelato);
+    }
+
+    // Calculate center point and angle
+    const centerX = (startX + endX) / 2;
+    const centerY = (startY + endY) / 2;
+    const angle = Math.atan2(endY - startY, endX - startX);
+    const gelatoLength = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2);
+
+    // Create static rectangular body for the Gelato
+    this.gelato = Matter.Bodies.rectangle(
+      centerX,
+      centerY,
+      gelatoLength,
+      config.gelato.thickness,
+      {
+        isStatic: true,
+        angle: angle,
+        label: 'gelato',
+        restitution: 0.8, // Bouncy!
+      }
+    );
+
+    Matter.World.add(this.world, this.gelato);
+
+    // Return line data for rendering
+    return { startX, startY, endX, endY };
+  }
+
+  /**
+   * Get current Gelato for rendering (if exists)
+   */
+  getGelato() {
+    if (!this.gelato) return null;
+
+    return {
+      x: this.gelato.position.x,
+      y: this.gelato.position.y,
+      angle: this.gelato.angle,
+      width: this.gelato.bounds.max.x - this.gelato.bounds.min.x,
+      height: this.gelato.bounds.max.y - this.gelato.bounds.min.y,
+    };
+  }
+
+  /**
+   * Destroy current Gelato
+   */
+  destroyGelato() {
+    if (this.gelato) {
+      Matter.World.remove(this.world, this.gelato);
+      this.gelato = null;
+    }
   }
 
   /**

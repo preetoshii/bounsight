@@ -78,8 +78,20 @@ export function GameApp() {
   };
 
   const handleTouchEnd = () => {
-    if (currentLine) {
-      setLines([...lines, currentLine]);
+    if (currentLine && gameCore.current) {
+      // Create physics Gelato from the drawn line
+      const gelatoLine = gameCore.current.createGelato(
+        currentLine.startX,
+        currentLine.startY,
+        currentLine.endX,
+        currentLine.endY
+      );
+
+      // Store the clamped line for visual rendering
+      if (gelatoLine) {
+        setLines([gelatoLine]); // Replace old lines (only one Gelato at a time)
+      }
+
       setCurrentLine(null);
     }
   };

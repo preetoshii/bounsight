@@ -1,5 +1,5 @@
 import React from 'react';
-import { Canvas, Circle, Fill, Line, Rect, vec } from '@shopify/react-native-skia';
+import { Canvas, Circle, Fill, Line, Rect, vec, DashPathEffect } from '@shopify/react-native-skia';
 import { config } from '../../config';
 
 /**
@@ -36,15 +36,17 @@ export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], 
         />
       ))}
 
-      {/* Draw current line being drawn */}
+      {/* Draw current line being drawn (dotted preview) */}
       {currentLine && (
         <Line
           p1={vec(currentLine.startX, currentLine.startY)}
           p2={vec(currentLine.endX, currentLine.endY)}
-          color="rgba(255, 255, 255, 0.5)"
+          color="rgba(255, 255, 255, 0.6)"
           style="stroke"
           strokeWidth={config.gelato.thickness}
-        />
+        >
+          <DashPathEffect intervals={[10, 10]} />
+        </Line>
       )}
 
       {/* Mascot circle (now physics-based!) */}
