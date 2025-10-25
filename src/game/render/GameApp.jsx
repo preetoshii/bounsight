@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, View, Dimensions, TouchableOpacity, Text, Animated } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { Feather } from '@expo/vector-icons';
 import { GameRenderer } from './GameRenderer';
 import { GameCore } from '../core/GameCore';
 import { config } from '../../config';
@@ -215,10 +216,10 @@ export function GameApp() {
           mascotVelocityY={mascotVelocityY.current}
         />
 
-        {/* Temporary Admin Button (will be replaced with staircase unlock) */}
+        {/* Admin Button - Feather Icon */}
         {!showAdmin && (
           <TouchableOpacity style={styles.adminButton} onPress={openAdmin}>
-            <Text style={styles.adminButtonText}>Admin</Text>
+            <Feather name="feather" size={20} color="#ffffff" style={{ opacity: 0.6 }} />
           </TouchableOpacity>
         )}
       </Animated.View>
@@ -251,15 +252,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 50,
     right: 20,
-    backgroundColor: '#4a9eff',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
     zIndex: 1000,
-  },
-  adminButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '600',
   },
 });

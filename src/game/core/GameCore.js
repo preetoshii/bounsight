@@ -21,10 +21,13 @@ export class GameCore {
     // Store custom message for preview mode
     this.customMessage = customMessage;
 
-    // Create mascot (dynamic body - affected by gravity)
+    // Store target position for entrance animation
+    this.mascotTargetY = height * 0.25; // 25% from top = 75% near top
+
+    // Create mascot (starts above screen for entrance animation)
     this.mascot = Matter.Bodies.circle(
       width / 2,
-      100,
+      -config.physics.mascot.radius * 2, // Start above screen
       config.physics.mascot.radius,
       {
         restitution: config.physics.mascot.restitution,
@@ -32,29 +35,30 @@ export class GameCore {
         frictionAir: config.physics.mascot.frictionAir,
         mass: config.physics.mascot.mass,
         label: 'mascot',
+        // Always dynamic, we'll control gravity manually
       }
     );
 
     Matter.World.add(this.world, this.mascot);
 
+    // Track entrance animation
+    this.entranceStartTime = Date.now();
+    this.entranceComplete = false;
+
+    // Track idle float animation timing
+    this.idleFloatStartTime = null; // Will be set when entrance completes
+
+    // Track whether game has started
+    this.gameStarted = false;
+
+    // Track loss state
+    this.hasLost = false;
+
     // Create boundary walls using config
     const wallThickness = config.walls.thickness;
     const halfThickness = wallThickness / 2;
 
-    // Ground (bottom boundary)
-    const ground = Matter.Bodies.rectangle(
-      width / 2,
-      height - halfThickness,
-      width,
-      wallThickness,
-      {
-        isStatic: true,
-        label: 'ground',
-        restitution: config.walls.restitution,
-      }
-    );
-
-    // Side walls
+    // Side walls only (no bottom boundary - ball can fall off)
     const leftWall = Matter.Bodies.rectangle(
       halfThickness,
       height / 2,
@@ -79,10 +83,10 @@ export class GameCore {
       }
     );
 
-    Matter.World.add(this.world, [ground, leftWall, rightWall]);
+    Matter.World.add(this.world, [leftWall, rightWall]);
 
     // Store obstacles for rendering
-    this.obstacles = [ground, leftWall, rightWall];
+    this.obstacles = [leftWall, rightWall];
 
     // Track Gelatos (player-drawn springboards)
     this.gelato = null; // Only one Gelato at a time (maxActiveGelatos = 1)
@@ -121,6 +125,64 @@ export class GameCore {
    * Call this every frame with delta time
    */
   step(deltaMs) {
+    // Disable gravity before game starts (manual position control)
+    if (!this.gameStarted) {
+      Matter.Body.setVelocity(this.mascot, { x: 0, y: 0 });
+    }
+
+    // Check for loss (ball fell below screen)
+    if (this.gameStarted && !this.hasLost && this.mascot.position.y > this.height + config.physics.mascot.radius * 2) {
+      this.handleLoss();
+      return; // Skip physics update on loss frame
+    }
+
+    // Handle entrance animation (with delay)
+    if (!this.entranceComplete) {
+      const elapsed = Date.now() - this.entranceStartTime;
+      const delayMs = config.physics.entrance.delayMs;
+      const durationMs = config.physics.entrance.durationMs;
+
+      // Wait for delay before starting animation
+      if (elapsed < delayMs) {
+        // Still waiting, keep ball above screen
+        return;
+      }
+
+      // Calculate progress after delay
+      const animationElapsed = elapsed - delayMs;
+      const progress = Math.min(animationElapsed / durationMs, 1);
+
+      // Ease-out cubic easing for smooth deceleration
+      const easeProgress = 1 - Math.pow(1 - progress, 3);
+
+      const startY = -config.physics.mascot.radius * 2;
+      const newY = startY + (this.mascotTargetY - startY) * easeProgress;
+
+      Matter.Body.setPosition(this.mascot, {
+        x: this.mascot.position.x,
+        y: newY,
+      });
+
+      if (progress >= 1) {
+        this.entranceComplete = true;
+        // Start idle float timing from now to ensure smooth transition
+        this.idleFloatStartTime = Date.now();
+      }
+    }
+    // Handle floating animation when stationary (before game starts)
+    else if (!this.gameStarted) {
+      // Use time relative to when idle float started
+      const time = (Date.now() - this.idleFloatStartTime) / 1000; // Convert to seconds
+
+      // Sine wave for smooth up/down motion using config values
+      const offset = Math.sin(time * config.physics.idleFloat.speed * Math.PI * 2) * config.physics.idleFloat.amplitude;
+
+      Matter.Body.setPosition(this.mascot, {
+        x: this.mascot.position.x,
+        y: this.mascotTargetY + offset,
+      });
+    }
+
     Matter.Engine.update(this.engine, deltaMs);
 
     // Apply velocity capping (safety valve)
@@ -151,6 +213,41 @@ export class GameCore {
         this.bounceImpact = null;
       }
     }
+  }
+
+  /**
+   * Handle loss (ball fell off screen)
+   */
+  handleLoss() {
+    this.hasLost = true;
+
+    // Reset word index to start message from beginning
+    this.wordIndex = 0;
+    this.currentWord = null;
+
+    // Remove any existing gelato
+    if (this.gelato) {
+      Matter.World.remove(this.world, this.gelato);
+      this.gelato = null;
+      this.gelatoLineData = null;
+      this.bounceImpact = null;
+    }
+
+    // Reset ball to starting position (above screen)
+    Matter.Body.setPosition(this.mascot, {
+      x: this.width / 2,
+      y: -config.physics.mascot.radius * 2,
+    });
+
+    // Clear velocity (gravity will be disabled by !gameStarted check)
+    Matter.Body.setVelocity(this.mascot, { x: 0, y: 0 });
+
+    // Reset entrance animation
+    this.entranceStartTime = Date.now();
+    this.entranceComplete = false;
+    this.idleFloatStartTime = null;
+    this.gameStarted = false;
+    this.hasLost = false;
   }
 
   /**
@@ -235,6 +332,12 @@ export class GameCore {
    * Returns the line data if created, null if max length exceeded
    */
   createGelato(startX, startY, endX, endY) {
+    // Start the game on first gelato creation
+    if (!this.gameStarted) {
+      this.gameStarted = true;
+      // Ball is already dynamic, just enable physics by allowing gravity
+    }
+
     // Check max length constraint
     const dx = endX - startX;
     const dy = endY - startY;
@@ -374,21 +477,9 @@ export class GameCore {
       Matter.World.remove(this.world, obstacle);
     });
 
-    // Create new boundaries with new dimensions
+    // Create new boundaries with new dimensions (side walls only)
     const wallThickness = config.walls.thickness;
     const halfThickness = wallThickness / 2;
-
-    const ground = Matter.Bodies.rectangle(
-      width / 2,
-      height - halfThickness,
-      width,
-      wallThickness,
-      {
-        isStatic: true,
-        label: 'ground',
-        restitution: config.walls.restitution,
-      }
-    );
 
     const leftWall = Matter.Bodies.rectangle(
       halfThickness,
@@ -414,8 +505,8 @@ export class GameCore {
       }
     );
 
-    Matter.World.add(this.world, [ground, leftWall, rightWall]);
-    this.obstacles = [ground, leftWall, rightWall];
+    Matter.World.add(this.world, [leftWall, rightWall]);
+    this.obstacles = [leftWall, rightWall];
   }
 
   /**

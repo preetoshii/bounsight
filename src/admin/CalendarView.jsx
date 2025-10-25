@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useRef, useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, TextInput, Animated } from 'react-native';
 
 /**
  * CalendarView - Horizontal scrolling card-based calendar
@@ -7,6 +7,10 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from
 export function CalendarView({ scheduledMessages, onSelectDate, onClose }) {
   const { width, height } = Dimensions.get('window');
   const scrollViewRef = useRef(null);
+  const textInputRefs = useRef({}).current;
+  const [editingDate, setEditingDate] = useState(null);
+  const [editingText, setEditingText] = useState('');
+  const cardAnimations = useRef({}).current;
 
   // Generate date slots (past 7 days, today, next 30 days)
   const generateDateSlots = () => {
@@ -47,63 +51,175 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose }) {
 
   const slots = generateDateSlots();
 
+  // Find today's index for scrolling
+  const todayIndex = slots.findIndex(slot => slot.isToday);
+
+  // Scroll to today's card on mount
+  useEffect(() => {
+    if (scrollViewRef.current && todayIndex !== -1) {
+      // Small delay to ensure layout is complete
+      setTimeout(() => {
+        const scrollX = todayIndex * snapInterval;
+        scrollViewRef.current?.scrollTo({ x: scrollX, animated: false });
+      }, 100);
+    }
+  }, []);
+
   const formatDate = (dateStr, isToday) => {
     const date = new Date(dateStr + 'T00:00:00');
     const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
     const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
     if (isToday) {
-      return `TODAY, ${monthDay}`;
+      return `TODAY, ${monthDay}`.toUpperCase();
     }
-    return `${weekday}, ${monthDay}`;
+    return `${weekday}, ${monthDay}`.toUpperCase();
   };
 
   const getMessageForDate = (dateStr) => {
     return scheduledMessages[dateStr] || null;
   };
 
-  // Card dimensions
-  const cardWidth = width * 0.85; // 85% of screen width
-  const cardHeight = height * 0.7; // 70% of screen height
-  const cardSpacing = 16;
+  // Get or create animation value for a card
+  const getCardAnimation = (dateStr) => {
+    if (!cardAnimations[dateStr]) {
+      cardAnimations[dateStr] = {
+        scale: new Animated.Value(1),
+        opacity: new Animated.Value(1),
+      };
+    }
+    return cardAnimations[dateStr];
+  };
+
+  // Handle card tap
+  const handleCardPress = (dateStr, messageText, isEditable) => {
+    if (!isEditable) return;
+    setEditingDate(dateStr);
+    setEditingText(messageText || '');
+
+    // Animate the editing card to expand
+    const editingAnim = getCardAnimation(dateStr);
+    Animated.timing(editingAnim.scale, {
+      toValue: 1.1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+
+    // Fade out other cards
+    Object.keys(cardAnimations).forEach(key => {
+      if (key !== dateStr) {
+        Animated.timing(cardAnimations[key].opacity, {
+          toValue: 0.2,
+          duration: 300,
+          useNativeDriver: true,
+        }).start();
+      }
+    });
+
+    // Focus the text input after animation starts
+    setTimeout(() => {
+      textInputRefs[dateStr]?.focus();
+    }, 100);
+  };
+
+  // Handle back from edit mode
+  const handleBackFromEdit = () => {
+    // Animate back to normal
+    Object.keys(cardAnimations).forEach(key => {
+      Animated.parallel([
+        Animated.timing(cardAnimations[key].scale, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(cardAnimations[key].opacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    });
+
+    setTimeout(() => {
+      setEditingDate(null);
+      setEditingText('');
+    }, 100);
+  };
+
+  // Card dimensions - square aspect ratio
+  const cardSize = Math.min(width * 0.75, height * 0.6); // Smaller cards, less claustrophobic
+  const cardSpacing = 64; // Doubled spacing between cards
+  const snapInterval = cardSize + cardSpacing; // Total width of one card including spacing
+  const editCardSize = Math.min(width * 0.9, height * 0.75); // Slightly larger when editing
 
   return (
     <View style={styles.container}>
-      {/* Header with close button */}
+      {/* Header with close/back button */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Messages</Text>
-        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <Text style={styles.closeButtonText}>✕</Text>
-        </TouchableOpacity>
+        {editingDate ? (
+          <TouchableOpacity onPress={handleBackFromEdit} style={styles.backButton}>
+            <Text style={styles.backButtonText}>← Back</Text>
+          </TouchableOpacity>
+        ) : (
+          <Text style={styles.headerTitle}>Messages</Text>
+        )}
+        {!editingDate && (
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Text style={styles.closeButtonText}>✕</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Horizontal scrolling cards */}
-      <ScrollView
-        ref={scrollViewRef}
-        horizontal
-        pagingEnabled={false}
-        showsHorizontalScrollIndicator={false}
-        snapToInterval={cardWidth + cardSpacing}
-        decelerationRate="fast"
-        contentContainerStyle={[styles.scrollContent, { paddingHorizontal: (width - cardWidth) / 2 }]}
+      <TouchableOpacity
+        style={styles.scrollView}
+        activeOpacity={1}
+        onPress={editingDate ? handleBackFromEdit : undefined}
+        disabled={!editingDate}
       >
+        <ScrollView
+          ref={scrollViewRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          scrollEnabled={!editingDate}
+          style={styles.scrollView}
+          contentContainerStyle={[styles.scrollContent, { paddingLeft: (width - cardSize) / 2, paddingRight: (width - cardSize) / 2 }]}
+        >
         {slots.map((slot, index) => {
           const message = getMessageForDate(slot.date);
           const isEditable = !slot.isPast;
+          const isEditing = editingDate === slot.date;
+          const isOtherCardEditing = editingDate && !isEditing;
+          const anim = getCardAnimation(slot.date);
 
           return (
-            <TouchableOpacity
+            <Animated.View
               key={slot.date}
-              style={[
-                styles.card,
-                { width: cardWidth, height: cardHeight },
-                slot.isPast && styles.cardPast,
-                slot.isToday && styles.cardToday,
-              ]}
-              onPress={() => isEditable && onSelectDate(slot.date, message?.text || '')}
-              disabled={slot.isPast}
-              activeOpacity={0.9}
+              style={{
+                transform: [{ scale: anim.scale }],
+                opacity: anim.opacity,
+              }}
             >
+              <TouchableOpacity
+                style={[
+                  styles.card,
+                  {
+                    width: isEditing ? editCardSize : cardSize,
+                    height: isEditing ? editCardSize : cardSize,
+                  },
+                  slot.isPast && styles.cardPast,
+                  slot.isToday && styles.cardToday,
+                  isEditing && styles.cardEditing,
+                ]}
+                onPress={(e) => {
+                  if (!isEditing) {
+                    e.stopPropagation();
+                    handleCardPress(slot.date, message?.text || '', isEditable);
+                  }
+                }}
+                disabled={slot.isPast}
+                activeOpacity={0.9}
+              >
               {/* Date header */}
               <View style={styles.cardHeader}>
                 <Text style={[styles.cardDate, slot.isPast && styles.textMuted]}>
@@ -116,34 +232,52 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose }) {
                 )}
               </View>
 
-              {/* Message preview */}
-              <View style={styles.cardContent}>
-                {message?.text ? (
-                  <Text style={[styles.messageText, slot.isPast && styles.textMuted]}>
-                    {message.text}
-                  </Text>
-                ) : (
-                  <Text style={styles.emptyText}>
-                    {slot.isPast ? 'No message' : 'Tap to add message'}
-                  </Text>
-                )}
+              {/* Message input/display - always the same element */}
+              <View style={styles.cardContent} pointerEvents={isEditing ? 'auto' : 'none'}>
+                <TextInput
+                  ref={(ref) => { textInputRefs[slot.date] = ref; }}
+                  style={styles.messageInput}
+                  value={isEditing ? editingText : (message?.text || '')}
+                  onChangeText={isEditing ? setEditingText : undefined}
+                  placeholder="Tap to add a message"
+                  placeholderTextColor="#666"
+                  multiline
+                  editable={isEditing}
+                  showSoftInputOnFocus={isEditing}
+                  textAlign="center"
+                />
               </View>
 
-              {/* Edit indicator for future dates */}
-              {!slot.isPast && (
-                <View style={styles.cardFooter}>
-                  <Text style={styles.editHint}>Tap to edit</Text>
+              {/* Edit icon for editable dates (hidden when editing) */}
+              {!slot.isPast && !isEditing && (
+                <View style={styles.editIcon}>
+                  <Text style={styles.editIconText}>✎</Text>
                 </View>
               )}
-            </TouchableOpacity>
+
+              {/* Preview button when editing */}
+              {isEditing && (
+                <TouchableOpacity
+                  style={styles.previewButton}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    // Exit edit mode and go to preview
+                    handleBackFromEdit();
+                    onSelectDate(slot.date, editingText);
+                  }}
+                  disabled={!editingText.trim()}
+                >
+                  <Text style={[styles.previewButtonText, !editingText.trim() && styles.previewButtonDisabled]}>
+                    Preview
+                  </Text>
+                </TouchableOpacity>
+              )}
+              </TouchableOpacity>
+            </Animated.View>
           );
         })}
-      </ScrollView>
-
-      {/* Scroll hint */}
-      <View style={styles.scrollHint}>
-        <Text style={styles.scrollHintText}>← Swipe to browse →</Text>
-      </View>
+        </ScrollView>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -159,13 +293,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     paddingTop: 60,
-    borderBottomWidth: 1,
-    borderBottomColor: '#222',
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: '300',
     color: '#ffffff',
+  },
+  backButton: {
+    padding: 8,
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: '#ffffff',
+    fontWeight: '400',
   },
   closeButton: {
     padding: 8,
@@ -174,17 +314,20 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: '#ffffff',
   },
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
+    alignItems: 'center',
     paddingVertical: 40,
-    gap: 16,
   },
   card: {
     backgroundColor: '#111',
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#222',
+    borderWidth: 2,
+    borderColor: '#ffffff',
     padding: 32,
-    marginHorizontal: 8,
+    marginRight: 64,
     justifyContent: 'space-between',
   },
   cardPast: {
@@ -194,14 +337,22 @@ const styles = StyleSheet.create({
     borderColor: '#4a9eff',
     borderWidth: 2,
   },
+  cardEditing: {
+    transform: [{ scale: 1 }],
+    zIndex: 10,
+  },
+  cardFaded: {
+    opacity: 0.2,
+  },
   cardHeader: {
     marginBottom: 24,
   },
   cardDate: {
-    fontSize: 20,
+    fontSize: 14,
     fontWeight: '400',
-    color: '#ffffff',
+    color: '#666',
     marginBottom: 12,
+    letterSpacing: 1,
   },
   activeBadge: {
     backgroundColor: '#4a9eff',
@@ -219,38 +370,49 @@ const styles = StyleSheet.create({
   cardContent: {
     flex: 1,
     justifyContent: 'center',
-  },
-  messageText: {
-    fontSize: 18,
-    lineHeight: 28,
-    color: '#ffffff',
-    fontWeight: '300',
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#666',
-    fontStyle: 'italic',
-  },
-  cardFooter: {
-    marginTop: 24,
     alignItems: 'center',
   },
-  editHint: {
-    fontSize: 14,
-    color: '#666',
+  messageInput: {
+    fontSize: 24,
+    lineHeight: 36,
+    color: '#ffffff',
+    fontWeight: '300',
+    width: '100%',
+    textAlign: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 0,
+    outlineStyle: 'none',
+    borderWidth: 0,
   },
-  textMuted: {
-    color: '#666',
-  },
-  scrollHint: {
+  editIcon: {
     position: 'absolute',
     bottom: 20,
+    right: 20,
+  },
+  editIconText: {
+    fontSize: 20,
+    color: '#666',
+  },
+  previewButton: {
+    position: 'absolute',
+    bottom: 24,
     left: 0,
     right: 0,
     alignItems: 'center',
+    backgroundColor: '#ffffff',
+    marginHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 8,
   },
-  scrollHintText: {
-    fontSize: 12,
+  previewButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#0a0a0a',
+  },
+  previewButtonDisabled: {
+    opacity: 0.3,
+  },
+  textMuted: {
     color: '#666',
   },
 });

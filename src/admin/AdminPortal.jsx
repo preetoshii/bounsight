@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
 import { CalendarView } from './CalendarView';
-import { EditView } from './EditView';
 import { PreviewMode } from './PreviewMode';
 import { Confirmation } from './Confirmation';
 
@@ -10,20 +9,15 @@ import { Confirmation } from './Confirmation';
  * Manages view state and fade transitions between views
  */
 export function AdminPortal({ onClose }) {
-  const [currentView, setCurrentView] = useState('calendar'); // 'calendar' | 'edit' | 'preview' | 'confirmation'
+  const [currentView, setCurrentView] = useState('calendar'); // 'calendar' | 'preview' | 'confirmation'
   const [editingDate, setEditingDate] = useState(null); // Date being edited
   const [draftMessage, setDraftMessage] = useState(''); // Message being composed
   const [scheduledMessages, setScheduledMessages] = useState({}); // All scheduled messages
 
-  // Navigate to edit view for a specific date
-  const openEditView = (date, existingMessage = '') => {
+  // Navigate to preview mode directly from calendar
+  const openPreview = (date, message) => {
     setEditingDate(date);
-    setDraftMessage(existingMessage);
-    setCurrentView('edit');
-  };
-
-  // Navigate to preview mode
-  const openPreview = () => {
+    setDraftMessage(message);
     setCurrentView('preview');
   };
 
@@ -65,19 +59,8 @@ export function AdminPortal({ onClose }) {
       {currentView === 'calendar' && (
         <CalendarView
           scheduledMessages={scheduledMessages}
-          onSelectDate={openEditView}
+          onSelectDate={openPreview}
           onClose={onClose}
-        />
-      )}
-
-      {currentView === 'edit' && (
-        <EditView
-          date={editingDate}
-          message={draftMessage}
-          isActive={isEditingToday()}
-          onMessageChange={setDraftMessage}
-          onBack={backToCalendar}
-          onPreview={openPreview}
         />
       )}
 
@@ -85,7 +68,7 @@ export function AdminPortal({ onClose }) {
         <PreviewMode
           message={draftMessage}
           isActive={isEditingToday()}
-          onBack={() => setCurrentView('edit')}
+          onBack={backToCalendar}
           onSave={isEditingToday() ? sendNow : saveMessage}
         />
       )}

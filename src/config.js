@@ -18,6 +18,18 @@ export const config = {
       mass: 1,                // Mass affects force calculations (default: 1)
     },
 
+    // Entrance animation (ball dropping from top)
+    entrance: {
+      delayMs: 1000,          // Delay before entrance animation starts (in milliseconds)
+      durationMs: 800,        // Duration of entrance animation (in milliseconds)
+    },
+
+    // Idle floating animation (before game starts)
+    idleFloat: {
+      amplitude: 8,           // Vertical movement range in pixels (up/down from center)
+      speed: 0.5,             // Cycles per second (lower = slower, more meditative)
+    },
+
     // Velocity limits (safety valve to prevent extreme speeds)
     maxVelocityX: 30,         // Maximum horizontal velocity in pixels/frame
     maxVelocityY: 50,         // Maximum vertical velocity in pixels/frame
