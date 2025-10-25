@@ -171,7 +171,7 @@ function CardItem({
 /**
  * CalendarView - Horizontal scrolling card-based calendar
  */
-export function CalendarView({ scheduledMessages, onSelectDate, initialEditingDate, initialEditingText, scrollToDate, onScrollComplete }) {
+export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initialEditingDate, initialEditingText, scrollToDate, onScrollComplete, isEditMode }) {
   const { width, height } = Dimensions.get('window');
   const scrollViewRef = useRef(null);
   const textInputRefs = useRef({}).current;
@@ -316,10 +316,9 @@ export function CalendarView({ scheduledMessages, onSelectDate, initialEditingDa
     setEditingText('');
   };
 
-  // Handle preview button press - just navigate, AdminPortal handles fade
+  // Handle preview button press - call onPreview to navigate to preview mode
   const handlePreview = () => {
-    // Don't call handleBackFromEdit - let AdminPortal handle the transition
-    onSelectDate(editingDate, editingText);
+    onPreview();
   };
 
   return (

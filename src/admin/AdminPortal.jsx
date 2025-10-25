@@ -11,7 +11,7 @@ import { fetchMessages, saveMessage as saveMessageToGitHub } from './githubApi';
  * Manages view state and fade transitions between views
  */
 export function AdminPortal({ onClose }) {
-  const [currentView, setCurrentView] = useState('calendar'); // 'calendar' | 'preview' | 'confirmation'
+  const [currentView, setCurrentView] = useState('calendar'); // 'calendar' | 'edit' | 'preview' | 'confirmation'
   const [editingDate, setEditingDate] = useState(null); // Date being edited
   const [draftMessage, setDraftMessage] = useState(''); // Message being composed
   const [scheduledMessages, setScheduledMessages] = useState({}); // All scheduled messages
@@ -45,11 +45,15 @@ export function AdminPortal({ onClose }) {
     }
   };
 
-  // Navigate to preview mode directly from calendar
-  const openPreview = (date, message) => {
+  // Navigate to edit mode when clicking a card (just sets state, no fade needed)
+  const openEdit = (date, message) => {
     setEditingDate(date);
     setDraftMessage(message);
+    setCurrentView('edit');
+  };
 
+  // Navigate to preview mode from edit mode
+  const openPreview = () => {
     // Fade out calendar first, then fade in preview
     Animated.timing(calendarOpacity, {
       toValue: 0,
@@ -65,21 +69,28 @@ export function AdminPortal({ onClose }) {
     });
   };
 
-  // Navigate back to calendar (keep editing state)
-  const backToCalendar = () => {
-    // Fade out preview first, then fade in calendar
+  // Navigate back from preview to edit
+  const backToEdit = () => {
+    // Fade out preview first, then fade in calendar (with edit state)
     Animated.timing(previewOpacity, {
       toValue: 0,
       duration: 200,
       useNativeDriver: true,
     }).start(() => {
-      setCurrentView('calendar');
+      setCurrentView('edit');
       Animated.timing(calendarOpacity, {
         toValue: 1,
         duration: 200,
         useNativeDriver: true,
       }).start();
     });
+  };
+
+  // Navigate back from edit to calendar
+  const backToCalendar = () => {
+    setCurrentView('calendar');
+    setEditingDate(null);
+    setDraftMessage('');
   };
 
   // Save message (for future dates)
@@ -155,15 +166,16 @@ export function AdminPortal({ onClose }) {
   // Handle back button based on current view
   const handleBack = () => {
     if (currentView === 'confirmation') {
+      // Confirmation → Preview
       setCurrentView('preview');
     } else if (currentView === 'preview') {
+      // Preview → Edit
+      backToEdit();
+    } else if (currentView === 'edit') {
+      // Edit → Calendar
       backToCalendar();
-    } else if (currentView === 'calendar' && editingDate) {
-      // If in calendar editing mode, exit edit mode
-      setEditingDate(null);
-      setDraftMessage('');
-    } else {
-      // Close admin portal
+    } else if (currentView === 'calendar') {
+      // Calendar → Game (close portal)
       onClose();
     }
   };
@@ -178,14 +190,16 @@ export function AdminPortal({ onClose }) {
         <Feather name="arrow-left" size={28} color="#ffffff" />
       </TouchableOpacity>
       {/* Calendar View - always rendered for smooth transitions */}
-      <Animated.View style={[styles.fullScreen, { opacity: calendarOpacity, pointerEvents: currentView === 'calendar' ? 'auto' : 'none' }]}>
+      <Animated.View style={[styles.fullScreen, { opacity: calendarOpacity, pointerEvents: (currentView === 'calendar' || currentView === 'edit') ? 'auto' : 'none' }]}>
         <CalendarView
           scheduledMessages={scheduledMessages}
-          onSelectDate={openPreview}
+          onSelectDate={openEdit}
+          onPreview={openPreview}
           initialEditingDate={editingDate}
           initialEditingText={draftMessage}
           scrollToDate={scrollToDate}
           onScrollComplete={() => setScrollToDate(null)}
+          isEditMode={currentView === 'edit'}
         />
       </Animated.View>
 
