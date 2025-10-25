@@ -42,5 +42,13 @@
   "kkk": {
     "url": "https://raw.githubusercontent.com/preetoshii/bounsight/master/word-audio/files/kkk.mp3",
     "generatedAt": "2025-10-25T09:20:41.756Z"
+  },
+  "mushrooms": {
+    "url": "https://raw.githubusercontent.com/preetoshii/bounsight/master/word-audio/files/mushrooms.mp3",
+    "generatedAt": "2025-10-25T09:22:25.173Z"
+  },
+  "is": {
+    "url": "https://raw.githubusercontent.com/preetoshii/bounsight/master/word-audio/files/is.mp3",
+    "generatedAt": "2025-10-25T09:22:25.766Z"
   }
 }
