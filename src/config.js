@@ -32,12 +32,20 @@ export const config = {
     maxActiveGelatos: 1,      // How many can exist at once
     color: '#FFFFFF',
 
-    // Visual deformation (trampoline effect)
+    // Visual deformation (trampoline effect on bounce)
     deformation: {
       maxBendAmount: 20,      // Maximum bend in pixels (higher = more dramatic)
       duration: 400,          // Total animation duration in ms
-      oscillations: 2,        // Number of spring-back oscillations (0 = no springiness, 2 = rubber band)
+      oscillations: 3,        // Number of spring-back oscillations (0 = no springiness, 3 = bouncy!)
       damping: 0.6,           // How much each oscillation reduces (0-1, higher = more damping)
+    },
+
+    // Creation animation (pop-in effect)
+    creation: {
+      maxBendAmount: 15,      // Maximum bend on creation (from center)
+      duration: 300,          // How long the pop-in animation lasts
+      oscillations: 2,        // Number of wobbles on creation
+      damping: 0.5,           // How quickly the wobble dampens
     },
 
     // Destruction on bounce
@@ -53,6 +61,8 @@ export const config = {
   walls: {
     behavior: 'bounce',       // 'bounce' or 'wrap'
     restitution: 0.5,         // Wall bounciness (if behavior is 'bounce')
+    thickness: 5,             // Thickness of boundary walls in pixels
+    visible: false,           // Whether to show walls visually (false = invisible boundaries)
   },
 
   // === HAPTICS ===

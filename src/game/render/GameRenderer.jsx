@@ -6,14 +6,14 @@ import { config } from '../../config';
  * GameRenderer - Unified Skia renderer for all platforms
  * This same code works on Web, iOS, and Android
  */
-export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], lines = [], currentPath = null, bounceImpact = null }) {
+export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], lines = [], currentPath = null, bounceImpact = null, gelatoCreationTime = null }) {
   return (
     <Canvas style={{ width, height }}>
       {/* Background */}
       <Fill color={config.visuals.backgroundColor} />
 
-      {/* Draw obstacles (ground and walls) */}
-      {obstacles.map((obstacle, index) => (
+      {/* Draw obstacles (walls/ground) if visible in config */}
+      {config.walls.visible && obstacles.map((obstacle, index) => (
         <Rect
           key={index}
           x={obstacle.x - obstacle.width / 2}
@@ -102,7 +102,58 @@ export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], 
           );
         }
 
-        // No deformation or fade - draw normal line
+        // Check for creation animation (pop-in effect)
+        if (gelatoCreationTime) {
+          const timeSinceCreation = Date.now() - gelatoCreationTime;
+          const creationConfig = config.gelato.creation;
+
+          if (timeSinceCreation < creationConfig.duration) {
+            // Calculate progress through creation animation
+            const progress = timeSinceCreation / creationConfig.duration;
+
+            // Apply oscillation from center
+            const frequency = creationConfig.oscillations * Math.PI * 2;
+            const dampingFactor = Math.pow(1 - progress, 1 / creationConfig.damping);
+            const oscillation = Math.sin(frequency * progress) * dampingFactor;
+
+            // Bend amount for creation
+            const bendAmount = creationConfig.maxBendAmount * oscillation;
+
+            // Calculate center point and perpendicular direction
+            const dx = line.endX - line.startX;
+            const dy = line.endY - line.startY;
+            const lineLength = Math.sqrt(dx * dx + dy * dy);
+
+            // Bend at center (t = 0.5)
+            const centerX = line.startX + dx * 0.5;
+            const centerY = line.startY + dy * 0.5;
+
+            // Perpendicular direction
+            const perpX = -dy / lineLength;
+            const perpY = dx / lineLength;
+
+            // Apply bend displacement from center
+            const displacedX = centerX + perpX * bendAmount;
+            const displacedY = centerY + perpY * bendAmount;
+
+            // Draw curved line
+            const path = Skia.Path.Make();
+            path.moveTo(line.startX, line.startY);
+            path.quadTo(displacedX, displacedY, line.endX, line.endY);
+
+            return (
+              <Path
+                key={index}
+                path={path}
+                color="white"
+                style="stroke"
+                strokeWidth={config.gelato.thickness}
+              />
+            );
+          }
+        }
+
+        // No animation - draw normal line
         return (
           <Line
             key={index}

@@ -34,32 +34,49 @@ export class GameCore {
 
     Matter.World.add(this.world, this.mascot);
 
-    // Create ground (static body - for testing)
+    // Create boundary walls using config
+    const wallThickness = config.walls.thickness;
+    const halfThickness = wallThickness / 2;
+
+    // Ground (bottom boundary)
     const ground = Matter.Bodies.rectangle(
       width / 2,
-      height - 25,
+      height - halfThickness,
       width,
-      50,
+      wallThickness,
       {
         isStatic: true,
         label: 'ground',
+        restitution: config.walls.restitution,
       }
     );
 
-    Matter.World.add(this.world, ground);
+    // Side walls
+    const leftWall = Matter.Bodies.rectangle(
+      halfThickness,
+      height / 2,
+      wallThickness,
+      height,
+      {
+        isStatic: true,
+        label: 'wall',
+        restitution: config.walls.restitution,
+      }
+    );
 
-    // Create side walls (static bodies - for testing)
-    const leftWall = Matter.Bodies.rectangle(25, height / 2, 50, height, {
-      isStatic: true,
-      label: 'wall',
-    });
+    const rightWall = Matter.Bodies.rectangle(
+      width - halfThickness,
+      height / 2,
+      wallThickness,
+      height,
+      {
+        isStatic: true,
+        label: 'wall',
+        restitution: config.walls.restitution,
+      }
+    );
 
-    const rightWall = Matter.Bodies.rectangle(width - 25, height / 2, 50, height, {
-      isStatic: true,
-      label: 'wall',
-    });
-
-    Matter.World.add(this.world, [leftWall, rightWall]);
+    Matter.World.add(this.world, [ground, leftWall, rightWall]);
 
     // Store obstacles for rendering
     this.obstacles = [ground, leftWall, rightWall];
@@ -73,6 +90,9 @@ export class GameCore {
 
     // Track bounce impact for visual deformation
     this.bounceImpact = null; // { x, y, strength, timestamp }
+
+    // Track creation time for pop-in animation
+    this.gelatoCreationTime = null;
 
     // Set up collision event handler
     Matter.Events.on(this.engine, 'collisionStart', (event) => {
@@ -240,6 +260,9 @@ export class GameCore {
     // Store line data for rendering
     this.gelatoLineData = { startX, startY, endX, endY };
 
+    // Track creation time for pop-in animation
+    this.gelatoCreationTime = Date.now();
+
     // Return line data for rendering
     return this.gelatoLineData;
   }
@@ -279,10 +302,73 @@ export class GameCore {
   }
 
   /**
+   * Get creation time for pop-in animation
+   */
+  getGelatoCreationTime() {
+    return this.gelatoCreationTime;
+  }
+
+  /**
    * Get Gelato line data for rendering
    */
   getGelatoLineData() {
     return this.gelatoLineData;
+  }
+
+  /**
+   * Update boundaries when screen size changes
+   */
+  updateBoundaries(width, height) {
+    this.width = width;
+    this.height = height;
+
+    // Remove old boundaries
+    this.obstacles.forEach(obstacle => {
+      Matter.World.remove(this.world, obstacle);
+    });
+
+    // Create new boundaries with new dimensions
+    const wallThickness = config.walls.thickness;
+    const halfThickness = wallThickness / 2;
+
+    const ground = Matter.Bodies.rectangle(
+      width / 2,
+      height - halfThickness,
+      width,
+      wallThickness,
+      {
+        isStatic: true,
+        label: 'ground',
+        restitution: config.walls.restitution,
+      }
+    );
+
+    const leftWall = Matter.Bodies.rectangle(
+      halfThickness,
+      height / 2,
+      wallThickness,
+      height,
+      {
+        isStatic: true,
+        label: 'wall',
+        restitution: config.walls.restitution,
+      }
+    );
+
+    const rightWall = Matter.Bodies.rectangle(
+      width - halfThickness,
+      height / 2,
+      wallThickness,
+      height,
+      {
+        isStatic: true,
+        label: 'wall',
+        restitution: config.walls.restitution,
+      }
+    );
+
+    Matter.World.add(this.world, [ground, leftWall, rightWall]);
+    this.obstacles = [ground, leftWall, rightWall];
   }
 
   /**

@@ -5,30 +5,35 @@ import { GameRenderer } from './GameRenderer';
 import { GameCore } from '../core/GameCore';
 import { config } from '../../config';
 
-const { width, height } = Dimensions.get('window');
-
 /**
  * GameApp - Main game component
  * Separated so it can be dynamically imported after Skia loads
  */
 export function GameApp() {
+  // Responsive dimensions - updates on window resize
+  const [dimensions, setDimensions] = useState(() => {
+    const { width, height } = Dimensions.get('window');
+    return { width, height };
+  });
   // Game physics core
   const gameCore = useRef(null);
   const [, forceUpdate] = useState(0);
 
   // Mascot position from physics
-  const mascotPos = useRef({ x: width / 2, y: 100 });
+  const mascotPos = useRef({ x: dimensions.width / 2, y: 100 });
   const obstacles = useRef([]);
   const bounceImpact = useRef(null); // Bounce impact data for visual deformation
+  const gelatoCreationTime = useRef(null); // Track creation time for pop-in animation
   const lastGelatoData = useRef(null); // Track last gelato data to detect changes
 
   // Simple line drawing state
   const [lines, setLines] = useState([]);
   const [currentPath, setCurrentPath] = useState(null); // Array of {x, y} points
 
+  // Initialize physics once on mount
   useEffect(() => {
-    // Initialize physics
-    gameCore.current = new GameCore(width, height);
+    // Initialize physics with current dimensions
+    gameCore.current = new GameCore(dimensions.width, dimensions.height);
 
     let animationFrameId;
     let lastTime = performance.now();
@@ -47,6 +52,7 @@ export function GameApp() {
       mascotPos.current = gameCore.current.getMascotPosition();
       obstacles.current = gameCore.current.getObstacles();
       bounceImpact.current = gameCore.current.getBounceImpact();
+      gelatoCreationTime.current = gameCore.current.getGelatoCreationTime();
 
       // Sync lines with GameCore (updates when gelato destroyed after fade)
       const currentGelatoData = gameCore.current.getGelatoLineData();
@@ -66,8 +72,25 @@ export function GameApp() {
 
     return () => {
       cancelAnimationFrame(animationFrameId);
-      gameCore.current.destroy();
+      if (gameCore.current) {
+        gameCore.current.destroy();
+      }
     };
+  }, []); // Only on mount
+
+  // Handle window resize - update boundaries without resetting game
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      const newDimensions = { width: window.width, height: window.height };
+      setDimensions(newDimensions);
+
+      // Update boundaries live without destroying game
+      if (gameCore.current) {
+        gameCore.current.updateBoundaries(newDimensions.width, newDimensions.height);
+      }
+    });
+
+    return () => subscription?.remove();
   }, []);
 
   // Helper: Calculate total path length
@@ -149,14 +172,15 @@ export function GameApp() {
       onResponderRelease={handleTouchEnd}
     >
       <GameRenderer
-        width={width}
-        height={height}
+        width={dimensions.width}
+        height={dimensions.height}
         mascotX={mascotPos.current.x}
         mascotY={mascotPos.current.y}
         obstacles={obstacles.current}
         lines={lines}
         currentPath={currentPath}
         bounceImpact={bounceImpact.current}
+        gelatoCreationTime={gelatoCreationTime.current}
       />
       <StatusBar style="light" />
     </View>
