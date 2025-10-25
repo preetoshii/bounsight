@@ -104,31 +104,31 @@ function CardItem({
 
   return (
     <Animated.View style={[animatedStyle, { alignItems: 'center' }]}>
-      <Animated.View
-        style={[
-          styles.card,
-          cardAnimatedStyle,
-          {
-            width: isEditing ? editCardWidth : cardSize,
-            height: isEditing ? editCardHeight : cardSize,
-          },
-          slot.isPast && styles.cardPast,
-          slot.isToday && styles.cardToday,
-        ]}
+      <TouchableOpacity
+        onPress={(e) => {
+          if (!isEditing) {
+            e.stopPropagation();
+            handleCardPress(slot.date, message?.text || '', isEditable, cardIndex);
+          }
+        }}
+        disabled={slot.isPast}
+        activeOpacity={1}
+        style={{ width: '100%', height: '100%' }}
       >
-        <TouchableOpacity
-          style={{ flex: 1 }}
-          onPress={(e) => {
-            if (!isEditing) {
-              e.stopPropagation();
-              handleCardPress(slot.date, message?.text || '', isEditable, cardIndex);
-            }
-          }}
-          disabled={slot.isPast}
-          activeOpacity={1}
+        <Animated.View
+          style={[
+            styles.card,
+            cardAnimatedStyle,
+            {
+              width: isEditing ? editCardWidth : cardSize,
+              height: isEditing ? editCardHeight : cardSize,
+            },
+            slot.isPast && styles.cardPast,
+            slot.isToday && styles.cardToday,
+          ]}
         >
-        {/* Date header */}
-        <View style={styles.cardHeader}>
+          {/* Date header */}
+          <View style={styles.cardHeader}>
           <Text style={[
             styles.cardDate,
             slot.isPast && styles.textMuted,
@@ -165,9 +165,8 @@ function CardItem({
             textAlign="center"
           />
         </View>
-
-        </TouchableOpacity>
-      </Animated.View>
+        </Animated.View>
+      </TouchableOpacity>
     </Animated.View>
   );
 }
