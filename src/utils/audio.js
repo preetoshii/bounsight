@@ -21,13 +21,13 @@ async function loadSound(name, source) {
 export async function playSound(name) {
   try {
     const soundMap = {
-      'back-button': require('../assets/back-button.wav'),
-      'card-slide': require('../assets/card-slide.wav'),
-      'gelato-create': require('../assets/gelato-create.wav'),
-      'gelato-bounce': require('../assets/gelato-bounce.wav'),
-      'loss': require('../assets/loss.wav'),
-      'preview': require('../assets/preview.wav'),
-      'wall-bump': require('../assets/wall-bump.wav'),
+      'back-button': require('../sfx/back-button.wav'),
+      'card-slide': require('../sfx/card-slide.wav'),
+      'gelato-create': require('../sfx/gelato-create.wav'),
+      'gelato-bounce': require('../sfx/gelato-bounce.wav'),
+      'loss': require('../sfx/loss.wav'),
+      'preview': require('../sfx/preview.wav'),
+      'wall-bump': require('../sfx/wall-bump.wav'),
     };
 
     const source = soundMap[name];
