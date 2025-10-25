@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Platform, Text, ActivityIndicator } from 'react-native';
 import { LoadSkiaWeb } from '@shopify/react-native-skia/lib/module/web';
 import { setupAudio } from './src/utils/audio';
+import { useFonts } from 'expo-font';
 
 // Load Skia on web immediately (before any Skia imports)
 let skiaLoadPromise = null;
@@ -16,6 +17,11 @@ export default function App() {
   const [GameAppComponent, setGameAppComponent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Load custom font
+  const [fontsLoaded] = useFonts({
+    'ADayWithoutSun': require('./src/A-day-without-sun-trial.otf'),
+  });
 
   useEffect(() => {
     async function loadApp() {
@@ -44,11 +50,11 @@ export default function App() {
     loadApp();
   }, []);
 
-  if (loading) {
+  if (loading || !fontsLoaded) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color="#69e" />
-        <Text style={styles.loadingText}>Loading Skia...</Text>
+        <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
   }

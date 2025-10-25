@@ -271,9 +271,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   word: {
-    fontFamily: 'Inter, system-ui, sans-serif',
+    fontFamily: 'ADayWithoutSun',
     fontSize: config.visuals.wordFontSize,
-    fontWeight: '300', // Thin weight
     color: config.visuals.wordColor,
     letterSpacing: 1,
   },
