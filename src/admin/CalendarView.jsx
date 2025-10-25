@@ -91,11 +91,25 @@ function CardItem({
     scrollSnapAlign: 'center', // CSS scroll snap for web
   }));
 
+  // Determine if card has content
+  const hasMessage = message && message.text;
+
   // Animated style for card border and background
-  const cardAnimatedStyle = useAnimatedStyle(() => ({
-    borderColor: `rgba(255, 255, 255, ${borderOpacity.value})`,
-    backgroundColor: `rgba(17, 17, 17, ${backgroundOpacity.value})`,
-  }));
+  const cardAnimatedStyle = useAnimatedStyle(() => {
+    if (hasMessage && !isEditing) {
+      // Populated card: white background, black text
+      return {
+        borderColor: `rgba(255, 255, 255, ${borderOpacity.value})`,
+        backgroundColor: `rgba(255, 255, 255, ${backgroundOpacity.value})`,
+      };
+    } else {
+      // Empty card or editing: dark background, white text
+      return {
+        borderColor: `rgba(255, 255, 255, ${borderOpacity.value})`,
+        backgroundColor: `rgba(17, 17, 17, ${backgroundOpacity.value})`,
+      };
+    }
+  });
 
   return (
     <Animated.View style={[animatedStyle, { alignItems: 'center' }]}>
@@ -124,11 +138,18 @@ function CardItem({
         >
         {/* Date header */}
         <View style={styles.cardHeader}>
-          <Text style={[styles.cardDate, slot.isPast && styles.textMuted]}>
+          <Text style={[
+            styles.cardDate,
+            slot.isPast && styles.textMuted,
+            hasMessage && !isEditing && { color: '#0a0a0a' } // Black text for populated cards
+          ]}>
             {formatDate(slot.date, slot.isToday)}
           </Text>
           {slot.isToday && (
-            <View style={styles.activeBadge}>
+            <View style={[
+              styles.activeBadge,
+              hasMessage && !isEditing && { backgroundColor: '#0a0a0a' } // Black badge for white cards
+            ]}>
               <Text style={styles.activeBadgeText}>ACTIVE</Text>
             </View>
           )}
@@ -138,7 +159,10 @@ function CardItem({
         <View style={styles.cardContent} pointerEvents={isEditing ? 'auto' : 'none'}>
           <TextInput
             ref={(ref) => { textInputRefs[slot.date] = ref; }}
-            style={styles.messageInput}
+            style={[
+              styles.messageInput,
+              hasMessage && !isEditing && { color: '#0a0a0a' } // Black text for populated cards
+            ]}
             value={isEditing ? editingText : (message?.text || '')}
             onChangeText={isEditing ? setEditingText : undefined}
             placeholder="Write a message"
