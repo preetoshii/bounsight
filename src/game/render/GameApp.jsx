@@ -339,6 +339,9 @@ export function GameApp() {
           />
 
           {/* Admin Button - Feather Icon */}
+          <View style={{ position: 'absolute', top: 50, right: 50, backgroundColor: 'red', padding: 20 }}>
+            <Text style={{ color: 'white' }}>ADMIN DEBUG</Text>
+          </View>
           <Button onPress={openAdmin} style={styles.adminButton}>
             <Feather name="feather" size={20} color="#ffffff" style={{ opacity: 0.6 }} />
           </Button>
