@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Dimensions } from 'react-native';
+import { StyleSheet, View, Dimensions, TouchableOpacity, Text, Animated } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { GameRenderer } from './GameRenderer';
 import { GameCore } from '../core/GameCore';
 import { config } from '../../config';
+import { AdminPortal } from '../../admin/AdminPortal';
 
 /**
  * GameApp - Main game component
@@ -31,6 +32,11 @@ export function GameApp() {
   // Simple line drawing state
   const [lines, setLines] = useState([]);
   const [currentPath, setCurrentPath] = useState(null); // Array of {x, y} points
+
+  // Admin portal state
+  const [showAdmin, setShowAdmin] = useState(false);
+  const gameOpacity = useRef(new Animated.Value(1)).current;
+  const adminOpacity = useRef(new Animated.Value(0)).current;
 
   // Initialize physics once on mount
   useEffect(() => {
@@ -167,27 +173,63 @@ export function GameApp() {
     }
   };
 
+  // Admin portal toggle functions
+  const openAdmin = () => {
+    setShowAdmin(true);
+    Animated.parallel([
+      Animated.timing(gameOpacity, { toValue: 0, duration: 400, useNativeDriver: true }),
+      Animated.timing(adminOpacity, { toValue: 1, duration: 400, useNativeDriver: true })
+    ]).start();
+  };
+
+  const closeAdmin = () => {
+    Animated.parallel([
+      Animated.timing(adminOpacity, { toValue: 0, duration: 400, useNativeDriver: true }),
+      Animated.timing(gameOpacity, { toValue: 1, duration: 400, useNativeDriver: true })
+    ]).start(() => {
+      setShowAdmin(false);
+    });
+  };
+
   return (
-    <View
-      style={styles.container}
-      onStartShouldSetResponder={() => true}
-      onResponderGrant={handleTouchStart}
-      onResponderMove={handleTouchMove}
-      onResponderRelease={handleTouchEnd}
-    >
-      <GameRenderer
-        width={dimensions.width}
-        height={dimensions.height}
-        mascotX={mascotPos.current.x}
-        mascotY={mascotPos.current.y}
-        obstacles={obstacles.current}
-        lines={lines}
-        currentPath={currentPath}
-        bounceImpact={bounceImpact.current}
-        gelatoCreationTime={gelatoCreationTime.current}
-        currentWord={currentWord.current}
-        mascotVelocityY={mascotVelocityY.current}
-      />
+    <View style={styles.container}>
+      {/* Game view with fade animation */}
+      <Animated.View
+        style={[styles.fullScreen, { opacity: gameOpacity, pointerEvents: showAdmin ? 'none' : 'auto' }]}
+        onStartShouldSetResponder={() => true}
+        onResponderGrant={handleTouchStart}
+        onResponderMove={handleTouchMove}
+        onResponderRelease={handleTouchEnd}
+      >
+        <GameRenderer
+          width={dimensions.width}
+          height={dimensions.height}
+          mascotX={mascotPos.current.x}
+          mascotY={mascotPos.current.y}
+          obstacles={obstacles.current}
+          lines={lines}
+          currentPath={currentPath}
+          bounceImpact={bounceImpact.current}
+          gelatoCreationTime={gelatoCreationTime.current}
+          currentWord={currentWord.current}
+          mascotVelocityY={mascotVelocityY.current}
+        />
+
+        {/* Temporary Admin Button (will be replaced with staircase unlock) */}
+        {!showAdmin && (
+          <TouchableOpacity style={styles.adminButton} onPress={openAdmin}>
+            <Text style={styles.adminButtonText}>Admin</Text>
+          </TouchableOpacity>
+        )}
+      </Animated.View>
+
+      {/* Admin portal with fade animation */}
+      {showAdmin && (
+        <Animated.View style={[styles.fullScreen, { opacity: adminOpacity }]}>
+          <AdminPortal onClose={closeAdmin} />
+        </Animated.View>
+      )}
+
       <StatusBar style="light" />
     </View>
   );
@@ -197,5 +239,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0a0a0a',
+  },
+  fullScreen: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  adminButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    backgroundColor: '#4a9eff',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    zIndex: 1000,
+  },
+  adminButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
