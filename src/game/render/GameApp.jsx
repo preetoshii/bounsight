@@ -52,6 +52,23 @@ export function GameApp() {
     }
   }, [previewMode]);
 
+  // Hide admin when preview mode is active, show when exiting preview
+  useEffect(() => {
+    if (previewMode) {
+      // Hide admin portal
+      Animated.parallel([
+        Animated.timing(adminOpacity, { toValue: 0, duration: 400, useNativeDriver: true }),
+        Animated.timing(gameOpacity, { toValue: 1, duration: 400, useNativeDriver: true })
+      ]).start();
+    } else if (showAdmin && !previewMode) {
+      // Show admin portal again (when exiting preview back to admin)
+      Animated.parallel([
+        Animated.timing(gameOpacity, { toValue: 0, duration: 400, useNativeDriver: true }),
+        Animated.timing(adminOpacity, { toValue: 1, duration: 400, useNativeDriver: true })
+      ]).start();
+    }
+  }, [previewMode]);
+
   // Initialize physics once on mount
   useEffect(() => {
     // Initialize physics with current dimensions
