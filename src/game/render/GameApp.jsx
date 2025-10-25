@@ -26,6 +26,7 @@ export function GameApp() {
   const gelatoCreationTime = useRef(null); // Track creation time for pop-in animation
   const lastGelatoData = useRef(null); // Track last gelato data to detect changes
   const currentWord = useRef(null); // Current word being displayed
+  const mascotVelocityY = useRef(0); // Current Y velocity of mascot
 
   // Simple line drawing state
   const [lines, setLines] = useState([]);
@@ -55,6 +56,7 @@ export function GameApp() {
       bounceImpact.current = gameCore.current.getBounceImpact();
       gelatoCreationTime.current = gameCore.current.getGelatoCreationTime();
       currentWord.current = gameCore.current.getCurrentWord();
+      mascotVelocityY.current = gameCore.current.getMascotVelocityY();
 
       // Sync lines with GameCore (updates when gelato destroyed after fade)
       const currentGelatoData = gameCore.current.getGelatoLineData();
@@ -184,6 +186,7 @@ export function GameApp() {
         bounceImpact={bounceImpact.current}
         gelatoCreationTime={gelatoCreationTime.current}
         currentWord={currentWord.current}
+        mascotVelocityY={mascotVelocityY.current}
       />
       <StatusBar style="light" />
     </View>

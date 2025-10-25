@@ -322,9 +322,11 @@ export class GameCore {
    */
   revealNextWord() {
     const word = this.message[this.wordIndex];
+    const mascotBody = this.mascot;
     this.currentWord = {
       text: word,
       timestamp: Date.now(),
+      initialVelocityY: mascotBody.velocity.y, // Store Y velocity at bounce
     };
 
     // Advance to next word (loop)
@@ -336,6 +338,13 @@ export class GameCore {
    */
   getCurrentWord() {
     return this.currentWord;
+  }
+
+  /**
+   * Get current Y velocity of mascot
+   */
+  getMascotVelocityY() {
+    return this.mascot.velocity.y;
   }
 
   /**

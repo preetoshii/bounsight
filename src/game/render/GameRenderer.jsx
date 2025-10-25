@@ -15,16 +15,20 @@ if (typeof document !== 'undefined') {
  * GameRenderer - Unified Skia renderer for all platforms
  * This same code works on Web, iOS, and Android
  */
-export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], lines = [], currentPath = null, bounceImpact = null, gelatoCreationTime = null, currentWord = null }) {
-  // Calculate word opacity for fade
+export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], lines = [], currentPath = null, bounceImpact = null, gelatoCreationTime = null, currentWord = null, mascotVelocityY = 0 }) {
+  // Calculate word opacity based on velocity change
+  // Opacity fades 1:1 with ball falling (velocity increasing downward from bounce)
   let wordOpacity = 0;
-  if (currentWord) {
-    const timeSinceReveal = Date.now() - currentWord.timestamp;
-    const fadeOutDuration = config.visuals.wordFadeMs;
-    if (timeSinceReveal < fadeOutDuration) {
-      const fadeProgress = timeSinceReveal / fadeOutDuration;
-      wordOpacity = 1 - fadeProgress;
-    }
+  if (currentWord && currentWord.initialVelocityY !== undefined) {
+    // At bounce: initialVelocityY is negative (upward)
+    // As ball falls: velocityY increases toward positive (downward)
+    // Fade from 100% to 0% as velocity goes from initial (negative) to 0 (peak) to positive
+    const velocityRange = Math.abs(currentWord.initialVelocityY);
+    const velocityChange = mascotVelocityY - currentWord.initialVelocityY;
+
+    // Normalize velocity change: 0 at bounce, 1 when velocity reverses completely
+    const fadeProgress = Math.min(1, Math.max(0, velocityChange / (velocityRange * 2)));
+    wordOpacity = 1 - fadeProgress;
   }
 
   return (
