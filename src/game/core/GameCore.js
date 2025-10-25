@@ -94,6 +94,14 @@ export class GameCore {
     // Track creation time for pop-in animation
     this.gelatoCreationTime = null;
 
+    // Message system (Milestone 3)
+    this.message = [
+      "you", "are", "loved", "beyond", "measure",
+      "and", "nothing", "can", "change", "that"
+    ]; // Hardcoded test message
+    this.wordIndex = 0; // Current word in message
+    this.currentWord = null; // Currently displayed word { text, timestamp }
+
     // Set up collision event handler
     Matter.Events.on(this.engine, 'collisionStart', (event) => {
       this.handleCollision(event);
@@ -185,7 +193,8 @@ export class GameCore {
           timestamp: currentTime,
         };
 
-        // TODO: Emit word event here (Milestone 3)
+        // Reveal next word (Milestone 3)
+        this.revealNextWord();
       }
     }
   }
@@ -306,6 +315,27 @@ export class GameCore {
    */
   getGelatoCreationTime() {
     return this.gelatoCreationTime;
+  }
+
+  /**
+   * Reveal next word in message
+   */
+  revealNextWord() {
+    const word = this.message[this.wordIndex];
+    this.currentWord = {
+      text: word,
+      timestamp: Date.now(),
+    };
+
+    // Advance to next word (loop)
+    this.wordIndex = (this.wordIndex + 1) % this.message.length;
+  }
+
+  /**
+   * Get current word for display
+   */
+  getCurrentWord() {
+    return this.currentWord;
   }
 
   /**

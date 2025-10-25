@@ -1,16 +1,37 @@
 import React from 'react';
 import { Canvas, Circle, Fill, Line, Rect, vec, DashPathEffect, Path, Skia } from '@shopify/react-native-skia';
+import { Text, View, StyleSheet } from 'react-native';
 import { config } from '../../config';
+
+// Load Inter font (clean, geometric, open-source)
+if (typeof document !== 'undefined') {
+  const link = document.createElement('link');
+  link.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400&display=swap';
+  link.rel = 'stylesheet';
+  document.head.appendChild(link);
+}
 
 /**
  * GameRenderer - Unified Skia renderer for all platforms
  * This same code works on Web, iOS, and Android
  */
-export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], lines = [], currentPath = null, bounceImpact = null, gelatoCreationTime = null }) {
+export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], lines = [], currentPath = null, bounceImpact = null, gelatoCreationTime = null, currentWord = null }) {
+  // Calculate word opacity for fade
+  let wordOpacity = 0;
+  if (currentWord) {
+    const timeSinceReveal = Date.now() - currentWord.timestamp;
+    const fadeOutDuration = config.visuals.wordFadeMs;
+    if (timeSinceReveal < fadeOutDuration) {
+      const fadeProgress = timeSinceReveal / fadeOutDuration;
+      wordOpacity = 1 - fadeProgress;
+    }
+  }
+
   return (
-    <Canvas style={{ width, height }}>
-      {/* Background */}
-      <Fill color={config.visuals.backgroundColor} />
+    <View style={{ width, height, position: 'relative' }}>
+      <Canvas style={{ width, height }}>
+        {/* Background */}
+        <Fill color={config.visuals.backgroundColor} />
 
       {/* Draw obstacles (walls/ground) if visible in config */}
       {config.walls.visible && obstacles.map((obstacle, index) => (
@@ -194,6 +215,36 @@ export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], 
         style="stroke"
         strokeWidth={2}
       />
-    </Canvas>
+
+      </Canvas>
+
+      {/* Word overlay using React Native Text (works on all platforms!) */}
+      {currentWord && wordOpacity > 0 && (
+        <View style={styles.wordContainer} pointerEvents="none">
+          <Text style={[styles.word, { opacity: wordOpacity }]}>
+            {currentWord.text}
+          </Text>
+        </View>
+      )}
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  wordContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  word: {
+    fontFamily: 'Inter, system-ui, sans-serif',
+    fontSize: config.visuals.wordFontSize,
+    fontWeight: '300', // Thin weight
+    color: config.visuals.wordColor,
+    letterSpacing: 1,
+  },
+});

@@ -25,6 +25,7 @@ export function GameApp() {
   const bounceImpact = useRef(null); // Bounce impact data for visual deformation
   const gelatoCreationTime = useRef(null); // Track creation time for pop-in animation
   const lastGelatoData = useRef(null); // Track last gelato data to detect changes
+  const currentWord = useRef(null); // Current word being displayed
 
   // Simple line drawing state
   const [lines, setLines] = useState([]);
@@ -53,6 +54,7 @@ export function GameApp() {
       obstacles.current = gameCore.current.getObstacles();
       bounceImpact.current = gameCore.current.getBounceImpact();
       gelatoCreationTime.current = gameCore.current.getGelatoCreationTime();
+      currentWord.current = gameCore.current.getCurrentWord();
 
       // Sync lines with GameCore (updates when gelato destroyed after fade)
       const currentGelatoData = gameCore.current.getGelatoLineData();
@@ -181,6 +183,7 @@ export function GameApp() {
         currentPath={currentPath}
         bounceImpact={bounceImpact.current}
         gelatoCreationTime={gelatoCreationTime.current}
+        currentWord={currentWord.current}
       />
       <StatusBar style="light" />
     </View>
