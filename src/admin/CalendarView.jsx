@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   cardPast: {
-    opacity: 0.5,
+    opacity: 0.3,
   },
   cardToday: {
     borderColor: '#4a9eff',
