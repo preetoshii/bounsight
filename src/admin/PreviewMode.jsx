@@ -166,6 +166,9 @@ export function PreviewMode({ message, isActive, onSave }) {
 
       {/* Overlay controls */}
       <View style={styles.overlay}>
+        {/* Preview label (top-right) */}
+        <Text style={styles.previewLabel}>PREVIEW</Text>
+
         {/* Save/Send Now button (bottom-center) */}
         <TouchableOpacity style={styles.saveButton} onPress={onSave}>
           <Text style={styles.saveButtonText}>
@@ -212,5 +215,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     color: '#0a0a0a',
+  },
+  previewLabel: {
+    position: 'absolute',
+    top: 30,
+    right: 30,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666666',
+    letterSpacing: 2,
+    padding: 30,
   },
 });

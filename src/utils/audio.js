@@ -4,11 +4,16 @@ import { Audio } from 'expo-av';
 const sounds = {};
 
 // Load and cache a sound
-async function loadSound(name, source) {
-  if (sounds[name]) return sounds[name];
+async function loadSound(name, source, volume = 1.0) {
+  if (sounds[name]) {
+    // Always set volume on cached sounds
+    await sounds[name].setVolumeAsync(volume);
+    return sounds[name];
+  }
 
   try {
     const { sound } = await Audio.Sound.createAsync(source);
+    await sound.setVolumeAsync(volume);
     sounds[name] = sound;
     return sound;
   } catch (error) {
@@ -28,6 +33,7 @@ export async function playSound(name) {
       'loss': require('../sfx/loss.wav'),
       'preview': require('../sfx/preview.wav'),
       'wall-bump': require('../sfx/wall-bump.wav'),
+      'click': require('../sfx/click.wav'),
     };
 
     const source = soundMap[name];
@@ -36,7 +42,9 @@ export async function playSound(name) {
       return;
     }
 
-    const sound = await loadSound(name, source);
+    // Set volume: 20% for all except gelato-create (100%)
+    const volume = name === 'gelato-create' ? 1.0 : 0.2;
+    const sound = await loadSound(name, source, volume);
     if (sound) {
       await sound.replayAsync();
     }

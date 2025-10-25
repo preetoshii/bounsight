@@ -180,6 +180,12 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
   const [editingText, setEditingText] = useState(initialEditingText || '');
   const previewButtonTranslateY = useRef(new RNAnimated.Value(200)).current; // Start off-screen
 
+  // Sync with parent's editing state
+  useEffect(() => {
+    setEditingDate(initialEditingDate || null);
+    setEditingText(initialEditingText || '');
+  }, [initialEditingDate, initialEditingText]);
+
   // Animate preview button based on whether there's text
   useEffect(() => {
     if (editingText.trim()) {
@@ -322,6 +328,7 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
 
   // Handle preview button press - call onPreview to navigate to preview mode
   const handlePreview = () => {
+    playSound('click');
     playSound('preview');
     onPreview();
   };

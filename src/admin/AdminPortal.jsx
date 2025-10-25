@@ -164,6 +164,7 @@ export function AdminPortal({ onClose }) {
 
   // Handle back button - simple and direct
   const handleBack = () => {
+    playSound('click');
     playSound('back-button');
     console.log('🔙 Back pressed. currentView:', currentView, 'editingDate:', editingDate);
 
