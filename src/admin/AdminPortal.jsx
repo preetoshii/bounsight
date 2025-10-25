@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import { View, StyleSheet, Text, Pressable } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { CalendarView } from './CalendarView';
 import { PreviewMode } from './PreviewMode';
@@ -7,7 +7,6 @@ import { Confirmation } from './Confirmation';
 import { fetchMessages, saveMessage as saveMessageToGitHub } from './githubApi';
 import { playSound } from '../utils/audio';
 import { generateAudioForMessage } from '../services/wordAudioService';
-import { Button } from '../components/Button';
 
 /**
  * AdminPortal - Root component for admin interface
@@ -249,12 +248,15 @@ export function AdminPortal({ onClose, preloadedData }) {
   return (
     <View style={styles.container}>
       {/* Single persistent back button */}
-      <Button
-        onPress={handleBack}
+      <Pressable
+        onPress={() => {
+          playSound('click');
+          handleBack();
+        }}
         style={styles.backButton}
       >
         <Feather name="arrow-left" size={28} color="#ffffff" />
-      </Button>
+      </Pressable>
       {/* Calendar View - only render when active */}
       {currentView === 'calendar' && (
         <CalendarView

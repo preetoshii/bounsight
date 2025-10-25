@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Button } from '../components/Button';
+import { Pressable } from 'react-native';
 
 /**
  * Confirmation - Send Now confirmation dialog
@@ -20,13 +20,13 @@ export function Confirmation({ onCancel, onConfirm }) {
         </Text>
 
         <View style={styles.buttons}>
-          <Button style={styles.cancelButton} onPress={onCancel}>
+          <Pressable style={styles.cancelButton} onPress={onCancel}>
             <Text style={styles.cancelButtonText}>Cancel</Text>
-          </Button>
+          </Pressable>
 
-          <Button style={styles.confirmButton} onPress={onConfirm}>
+          <Pressable style={styles.confirmButton} onPress={onConfirm}>
             <Text style={styles.confirmButtonText}>Confirm</Text>
-          </Button>
+          </Pressable>
         </View>
       </View>
     </View>
