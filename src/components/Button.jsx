@@ -71,7 +71,7 @@ export function Button({
         onPressOut={handlePressOut}
         disabled={disabled}
         activeOpacity={1} // Disable default opacity change since we're using scale
-        style={[{ justifyContent: 'center', alignItems: 'center' }, style]}
+        style={[style, { justifyContent: 'center', alignItems: 'center' }]}
         {...otherProps}
       >
         {children}
