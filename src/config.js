@@ -85,12 +85,16 @@ export const config = {
     wordFontSize: 32,             // Font size for revealed words in pixels
 
     // Word fade mode: controls how words fade in/out after bounce
-    wordFadeMode: 'velocity',     // 'velocity' = sync with ball motion, 'static' = time-based fade
+    // - 'velocity': Text opacity syncs 1:1 with ball's velocity change (physics-based, organic feel)
+    //               Fades as ball rises and falls after bounce, tied to motion
+    // - 'static': Traditional time-based fade with three configurable phases (fade-in, persist, fade-out)
+    wordFadeMode: 'velocity',
 
     // Static fade timing (only used when wordFadeMode = 'static')
-    wordFadeInMs: 0,              // Fade-in duration: 0% → 100% opacity (0 = instant appearance)
-    wordPersistMs: 800,           // How long word stays at 100% opacity
-    wordFadeOutMs: 1500,          // Fade-out duration: 100% → 0% opacity
+    // Creates a three-phase animation: fade-in → persist at full opacity → fade-out
+    wordFadeInMs: 0,              // Phase 1: Fade-in duration from 0% → 100% opacity (0 = instant appearance)
+    wordPersistMs: 800,           // Phase 2: How long word stays at 100% opacity before fading out
+    wordFadeOutMs: 1500,          // Phase 3: Fade-out duration from 100% → 0% opacity
   },
 
   // === DRAWING ===
