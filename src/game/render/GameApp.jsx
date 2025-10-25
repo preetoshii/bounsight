@@ -9,6 +9,7 @@ import { AdminPortal } from '../../admin/AdminPortal';
 import { playSound } from '../../utils/audio';
 import { preloadMessageAudio } from '../../services/audioPlayer';
 import { generateAudioForMessage } from '../../services/wordAudioService';
+import { fetchMessages } from '../../admin/githubApi';
 
 /**
  * GameApp - Main game component
@@ -39,6 +40,7 @@ export function GameApp() {
 
   // Admin portal state
   const [showAdmin, setShowAdmin] = useState(false);
+  const [preloadedMessagesData, setPreloadedMessagesData] = useState(null);
   const gameOpacity = useRef(new Animated.Value(1)).current;
   const adminOpacity = useRef(new Animated.Value(0)).current;
 
@@ -282,8 +284,18 @@ export function GameApp() {
   };
 
   // Admin portal toggle functions
-  const openAdmin = () => {
+  const openAdmin = async () => {
     playSound('card-slide');
+
+    // Preload messages data to prevent flicker
+    try {
+      const data = await fetchMessages();
+      setPreloadedMessagesData(data);
+    } catch (error) {
+      console.error('Failed to preload messages:', error);
+      // Still open admin portal, it will handle the error
+    }
+
     // Reset admin opacity to 1 before showing
     adminOpacity.setValue(1);
     setShowAdmin(true);
@@ -334,7 +346,7 @@ export function GameApp() {
       {/* Admin portal - unmount when closed */}
       {showAdmin && (
         <View style={styles.fullScreen}>
-          <AdminPortal onClose={closeAdmin} />
+          <AdminPortal onClose={closeAdmin} preloadedData={preloadedMessagesData} />
         </View>
       )}
 

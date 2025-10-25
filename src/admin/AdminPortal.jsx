@@ -12,24 +12,32 @@ import { generateAudioForMessage } from '../services/wordAudioService';
  * AdminPortal - Root component for admin interface
  * Manages view state and fade transitions between views
  */
-export function AdminPortal({ onClose }) {
+export function AdminPortal({ onClose, preloadedData }) {
   const [currentView, setCurrentView] = useState('calendar'); // 'calendar' | 'preview' | 'confirmation'
   const [editingDate, setEditingDate] = useState(null); // Date being edited (when set, card is in edit mode)
   const [draftMessage, setDraftMessage] = useState(''); // Message being composed
   const [scheduledMessages, setScheduledMessages] = useState({}); // All scheduled messages
   const [scrollToDate, setScrollToDate] = useState(null); // Date to scroll to when returning to calendar
   const [messagesData, setMessagesData] = useState(null); // Full messages.json data (includes _sha for updates)
-  const [isLoading, setIsLoading] = useState(true); // Loading state
+  const [isLoading, setIsLoading] = useState(!preloadedData); // Loading state (false if data was preloaded)
   const [audioGenerationStatus, setAudioGenerationStatus] = useState(null); // {status: 'generating'|'complete'|'error', progress: {current, total}, message}
 
   // Animated values for view transitions
   const calendarOpacity = React.useRef(new Animated.Value(1)).current;
   const previewOpacity = React.useRef(new Animated.Value(0)).current;
 
-  // Load messages on mount
+  // Load messages on mount (or use preloaded data)
   useEffect(() => {
-    loadMessages();
-  }, []);
+    if (preloadedData) {
+      // Use preloaded data to avoid flicker
+      setMessagesData(preloadedData);
+      setScheduledMessages(preloadedData.messages || {});
+      console.log('Using preloaded messages:', preloadedData);
+    } else {
+      // Fallback: load from GitHub
+      loadMessages();
+    }
+  }, [preloadedData]);
 
   // Load all messages from GitHub
   const loadMessages = async () => {
