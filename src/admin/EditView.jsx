@@ -6,10 +6,15 @@ import { View, Text, TextInput, StyleSheet, TouchableOpacity, KeyboardAvoidingVi
  */
 export function EditView({ date, message, isActive, onMessageChange, onBack, onPreview }) {
   const formatDate = (dateStr) => {
-    const dateObj = new Date(dateStr);
+    const date = new Date(dateStr + 'T00:00:00'); // Parse as local time
     const today = new Date().toISOString().split('T')[0];
-    if (dateStr === today) return 'Today';
-    return dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
+    const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+    if (dateStr === today) {
+      return `TODAY, ${monthDay}`;
+    }
+    return `${weekday}, ${monthDay}`;
   };
 
   const isPreviewDisabled = !message || message.trim().length === 0;

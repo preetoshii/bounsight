@@ -45,9 +45,14 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose }) {
   const slots = generateDateSlots();
 
   const formatDate = (dateStr, isToday) => {
-    if (isToday) return 'Today';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const date = new Date(dateStr + 'T00:00:00'); // Parse as local time
+    const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
+    const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+    if (isToday) {
+      return `TODAY, ${monthDay}`;
+    }
+    return `${weekday}, ${monthDay}`;
   };
 
   const getMessageForDate = (dateStr) => {
