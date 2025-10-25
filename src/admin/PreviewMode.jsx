@@ -1,15 +1,146 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { GameRenderer } from '../game/render/GameRenderer';
+import { GameCore } from '../game/core/GameCore';
 
 /**
- * PreviewMode - Game preview with overlay controls (stub for now)
+ * PreviewMode - Game preview with draft message and overlay controls
  */
 export function PreviewMode({ message, isActive, onBack, onSave }) {
+  const [dimensions] = useState(() => {
+    const { width, height } = Dimensions.get('window');
+    return { width, height };
+  });
+
+  const gameCore = useRef(null);
+  const [, forceUpdate] = useState(0);
+
+  // Game state refs
+  const mascotPos = useRef({ x: dimensions.width / 2, y: 100 });
+  const obstacles = useRef([]);
+  const bounceImpact = useRef(null);
+  const gelatoCreationTime = useRef(null);
+  const currentWord = useRef(null);
+  const mascotVelocityY = useRef(0);
+  const [lines, setLines] = useState([]);
+  const [currentPath, setCurrentPath] = useState(null);
+  const lastGelatoData = useRef(null);
+
+  // Initialize preview game instance
+  useEffect(() => {
+    // Create GameCore with custom preview message
+    gameCore.current = new GameCore(dimensions.width, dimensions.height, message);
+
+    let animationFrameId;
+    let lastTime = performance.now();
+
+    const animate = (currentTime) => {
+      const deltaTime = currentTime - lastTime;
+      lastTime = currentTime;
+      const cappedDelta = Math.min(deltaTime, 16.667);
+
+      gameCore.current.step(cappedDelta);
+
+      // Update game state
+      mascotPos.current = gameCore.current.getMascotPosition();
+      obstacles.current = gameCore.current.getObstacles();
+      bounceImpact.current = gameCore.current.getBounceImpact();
+      gelatoCreationTime.current = gameCore.current.getGelatoCreationTime();
+      currentWord.current = gameCore.current.getCurrentWord();
+      mascotVelocityY.current = gameCore.current.getMascotVelocityY();
+
+      // Sync lines
+      const currentGelatoData = gameCore.current.getGelatoLineData();
+      if (currentGelatoData !== lastGelatoData.current) {
+        lastGelatoData.current = currentGelatoData;
+        setLines(currentGelatoData ? [currentGelatoData] : []);
+      }
+
+      forceUpdate(n => n + 1);
+      animationFrameId = requestAnimationFrame(animate);
+    };
+
+    animationFrameId = requestAnimationFrame(animate);
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      if (gameCore.current) {
+        gameCore.current.destroy();
+      }
+    };
+  }, [message, dimensions.width, dimensions.height]);
+
+  // Touch handlers for drawing
+  const handleTouchStart = (event) => {
+    const touch = event.nativeEvent.touches?.[0] || event.nativeEvent;
+    setCurrentPath([{ x: touch.pageX, y: touch.pageY }]);
+  };
+
+  const handleTouchMove = (event) => {
+    if (!currentPath) return;
+    const touch = event.nativeEvent.touches?.[0] || event.nativeEvent;
+    setCurrentPath([...currentPath, { x: touch.pageX, y: touch.pageY }]);
+  };
+
+  const handleTouchEnd = () => {
+    if (currentPath && currentPath.length >= 2 && gameCore.current) {
+      const startPoint = currentPath[0];
+      const endPoint = currentPath[currentPath.length - 1];
+
+      const gelatoLine = gameCore.current.createGelato(
+        startPoint.x,
+        startPoint.y,
+        endPoint.x,
+        endPoint.y
+      );
+
+      if (gelatoLine) {
+        setLines([gelatoLine]);
+      }
+
+      setCurrentPath(null);
+    }
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Preview Mode - Coming Soon</Text>
-      <Text style={styles.text}>Message: {message}</Text>
-      <Text style={styles.text}>Active: {isActive ? 'Yes' : 'No'}</Text>
+      {/* Game renderer */}
+      <View
+        style={styles.gameView}
+        onStartShouldSetResponder={() => true}
+        onResponderGrant={handleTouchStart}
+        onResponderMove={handleTouchMove}
+        onResponderRelease={handleTouchEnd}
+      >
+        <GameRenderer
+          width={dimensions.width}
+          height={dimensions.height}
+          mascotX={mascotPos.current.x}
+          mascotY={mascotPos.current.y}
+          obstacles={obstacles.current}
+          lines={lines}
+          currentPath={currentPath}
+          bounceImpact={bounceImpact.current}
+          gelatoCreationTime={gelatoCreationTime.current}
+          currentWord={currentWord.current}
+          mascotVelocityY={mascotVelocityY.current}
+        />
+      </View>
+
+      {/* Overlay controls */}
+      <View style={styles.overlay}>
+        {/* Back button (top-left) */}
+        <TouchableOpacity style={styles.backButton} onPress={onBack}>
+          <Text style={styles.backButtonText}>←</Text>
+        </TouchableOpacity>
+
+        {/* Save/Send Now button (bottom-center) */}
+        <TouchableOpacity style={styles.saveButton} onPress={onSave}>
+          <Text style={styles.saveButtonText}>
+            {isActive ? 'Send Now' : 'Save'}
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -18,11 +149,49 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0a0a0a',
+  },
+  gameView: {
+    flex: 1,
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    pointerEvents: 'box-none', // Allow touches to pass through to game
+  },
+  backButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  text: {
+  backButtonText: {
+    fontSize: 28,
     color: '#ffffff',
+    fontWeight: '300',
+  },
+  saveButton: {
+    position: 'absolute',
+    bottom: 40,
+    left: '50%',
+    transform: [{ translateX: -80 }], // Center horizontally (half of width)
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 8,
+    minWidth: 160,
+    alignItems: 'center',
+  },
+  saveButtonText: {
     fontSize: 16,
+    fontWeight: '600',
+    color: '#0a0a0a',
   },
 });

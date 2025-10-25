@@ -6,7 +6,7 @@ import { config } from '../../config';
  * Handles all physics simulation, collision detection, and game state
  */
 export class GameCore {
-  constructor(width, height) {
+  constructor(width, height, customMessage = null) {
     // Create Matter.js engine
     this.engine = Matter.Engine.create();
     this.world = this.engine.world;
@@ -17,6 +17,9 @@ export class GameCore {
     // Store dimensions
     this.width = width;
     this.height = height;
+
+    // Store custom message for preview mode
+    this.customMessage = customMessage;
 
     // Create mascot (dynamic body - affected by gravity)
     this.mascot = Matter.Bodies.circle(
@@ -95,10 +98,15 @@ export class GameCore {
     this.gelatoCreationTime = null;
 
     // Message system (Milestone 3)
-    this.message = [
-      "you", "are", "loved", "beyond", "measure",
-      "and", "nothing", "can", "change", "that"
-    ]; // Hardcoded test message
+    // Use custom message if provided (for preview mode), otherwise use default
+    if (customMessage) {
+      this.message = customMessage.toLowerCase().split(/\s+/);
+    } else {
+      this.message = [
+        "you", "are", "loved", "beyond", "measure",
+        "and", "nothing", "can", "change", "that"
+      ]; // Hardcoded test message
+    }
     this.wordIndex = 0; // Current word in message
     this.currentWord = null; // Currently displayed word { text, timestamp }
 
