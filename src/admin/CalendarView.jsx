@@ -141,7 +141,7 @@ function CardItem({
             style={styles.messageInput}
             value={isEditing ? editingText : (message?.text || '')}
             onChangeText={isEditing ? setEditingText : undefined}
-            placeholder="Tap to add a message"
+            placeholder="Write a message"
             placeholderTextColor="#666"
             multiline
             scrollEnabled={true}
@@ -160,7 +160,7 @@ function CardItem({
 /**
  * CalendarView - Horizontal scrolling card-based calendar
  */
-export function CalendarView({ scheduledMessages, onSelectDate, onClose, initialEditingDate, initialEditingText }) {
+export function CalendarView({ scheduledMessages, onSelectDate, onClose, initialEditingDate, initialEditingText, scrollToDate, onScrollComplete }) {
   const { width, height } = Dimensions.get('window');
   const scrollViewRef = useRef(null);
   const textInputRefs = useRef({}).current;
@@ -250,6 +250,22 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose, initial
     }
   }, []);
 
+  // Scroll to specific card when scrollToDate changes (after saving)
+  useEffect(() => {
+    if (scrollToDate && scrollViewRef.current) {
+      const dateIndex = slots.findIndex(slot => slot.date === scrollToDate);
+      if (dateIndex !== -1) {
+        const scrollX = dateIndex * snapInterval;
+        setTimeout(() => {
+          scrollViewRef.current?.scrollTo({ x: scrollX, animated: true });
+          if (onScrollComplete) {
+            setTimeout(onScrollComplete, 300); // Call after scroll animation
+          }
+        }, 100); // Small delay to ensure view is visible
+      }
+    }
+  }, [scrollToDate]);
+
   const formatDate = (dateStr, isToday) => {
     const date = new Date(dateStr + 'T00:00:00');
     const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
@@ -269,21 +285,19 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose, initial
   const handleCardPress = (dateStr, messageText, isEditable, cardIndex) => {
     if (!isEditable) return;
 
-    // Scroll to the clicked card
+    // Immediately expand the card for responsiveness
+    setEditingDate(dateStr);
+    setEditingText(messageText || '');
+
+    // Scroll to the clicked card (happens simultaneously with expansion)
     if (scrollViewRef.current && cardIndex !== undefined) {
       const scrollX = cardIndex * snapInterval;
       scrollViewRef.current.scrollTo({ x: scrollX, animated: true });
     }
 
-    // Wait for scroll to complete, then expand card
     setTimeout(() => {
-      setEditingDate(dateStr);
-      setEditingText(messageText || '');
-
-      setTimeout(() => {
-        textInputRefs[dateStr]?.focus();
-      }, 100);
-    }, 300); // Let scroll complete first
+      textInputRefs[dateStr]?.focus();
+    }, 100);
   };
 
   // Handle back from edit mode

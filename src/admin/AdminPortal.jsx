@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
 import { CalendarView } from './CalendarView';
 import { PreviewMode } from './PreviewMode';
 import { Confirmation } from './Confirmation';
+import { fetchMessages, saveMessage as saveMessageToGitHub } from './githubApi';
 
 /**
  * AdminPortal - Root component for admin interface
@@ -13,10 +14,35 @@ export function AdminPortal({ onClose }) {
   const [editingDate, setEditingDate] = useState(null); // Date being edited
   const [draftMessage, setDraftMessage] = useState(''); // Message being composed
   const [scheduledMessages, setScheduledMessages] = useState({}); // All scheduled messages
+  const [scrollToDate, setScrollToDate] = useState(null); // Date to scroll to when returning to calendar
+  const [messagesData, setMessagesData] = useState(null); // Full messages.json data (includes _sha for updates)
+  const [isLoading, setIsLoading] = useState(true); // Loading state
 
   // Animated values for view transitions
   const calendarOpacity = React.useRef(new Animated.Value(1)).current;
   const previewOpacity = React.useRef(new Animated.Value(0)).current;
+
+  // Load messages on mount
+  useEffect(() => {
+    loadMessages();
+  }, []);
+
+  // Load all messages from GitHub
+  const loadMessages = async () => {
+    try {
+      setIsLoading(true);
+      const data = await fetchMessages();
+      setMessagesData(data);
+      setScheduledMessages(data.messages || {});
+      console.log('Loaded messages from GitHub:', data);
+    } catch (error) {
+      console.error('Failed to load messages:', error);
+      // Use empty messages as fallback
+      setScheduledMessages({});
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Navigate to preview mode directly from calendar
   const openPreview = (date, message) => {
@@ -56,9 +82,31 @@ export function AdminPortal({ onClose }) {
   };
 
   // Save message (for future dates)
-  const saveMessage = () => {
-    // TODO: Update scheduled-messages.json via GitHub API
-    console.log('Saving message for', editingDate, ':', draftMessage);
+  const saveMessage = async () => {
+    try {
+      const savedDate = editingDate;
+
+      // Save to GitHub (makeCurrent = false for future dates)
+      const updatedData = await saveMessageToGitHub(savedDate, draftMessage, false);
+
+      // Update local state
+      setMessagesData(updatedData);
+      setScheduledMessages(updatedData.messages || {});
+
+      // Clear editing state so we return to normal calendar view (not edit mode)
+      setScrollToDate(savedDate); // Remember which card to scroll to
+      setEditingDate(null);
+      setDraftMessage('');
+
+      console.log('Saved message for', savedDate);
+    } catch (error) {
+      console.error('Failed to save message:', error);
+      // TODO: Show error to user
+      alert('Failed to save message. Please try again.');
+      return; // Don't navigate away on error
+    }
+
+    // Fade back to calendar
     backToCalendar();
   };
 
@@ -68,9 +116,31 @@ export function AdminPortal({ onClose }) {
   };
 
   // Confirm send now
-  const confirmSendNow = () => {
-    // TODO: Update current-message.json via GitHub API
-    console.log('Sending message now:', draftMessage);
+  const confirmSendNow = async () => {
+    try {
+      const savedDate = editingDate;
+
+      // Save to GitHub with makeCurrent = true (updates both message and current pointer)
+      const updatedData = await saveMessageToGitHub(savedDate, draftMessage, true);
+
+      // Update local state
+      setMessagesData(updatedData);
+      setScheduledMessages(updatedData.messages || {});
+
+      // Clear editing state
+      setScrollToDate(savedDate); // Remember which card to scroll to
+      setEditingDate(null);
+      setDraftMessage('');
+
+      console.log('Sent message now for', savedDate);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      // TODO: Show error to user
+      alert('Failed to send message. Please try again.');
+      return; // Don't navigate away on error
+    }
+
+    // Fade back to calendar
     backToCalendar();
   };
 
@@ -91,6 +161,8 @@ export function AdminPortal({ onClose }) {
           onClose={onClose}
           initialEditingDate={editingDate}
           initialEditingText={draftMessage}
+          scrollToDate={scrollToDate}
+          onScrollComplete={() => setScrollToDate(null)}
         />
       </Animated.View>
 

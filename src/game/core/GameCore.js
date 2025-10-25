@@ -106,13 +106,19 @@ export class GameCore {
     if (customMessage) {
       this.message = customMessage.toLowerCase().split(/\s+/);
     } else {
+      // Default fallback message (will be replaced by loaded message from GitHub)
       this.message = [
         "you", "are", "loved", "beyond", "measure",
         "and", "nothing", "can", "change", "that"
-      ]; // Hardcoded test message
+      ];
     }
     this.wordIndex = 0; // Current word in message
     this.currentWord = null; // Currently displayed word { text, timestamp }
+
+    // Load current message from messages.json if not in preview mode
+    if (!customMessage) {
+      this.loadCurrentMessage();
+    }
 
     // Set up collision event handler
     Matter.Events.on(this.engine, 'collisionStart', (event) => {
@@ -507,6 +513,36 @@ export class GameCore {
 
     Matter.World.add(this.world, [leftWall, rightWall]);
     this.obstacles = [leftWall, rightWall];
+  }
+
+  /**
+   * Load current message from messages.json
+   * Fetches from GitHub or local fallback
+   */
+  async loadCurrentMessage() {
+    try {
+      // Try to fetch from local server first (for development)
+      const response = await fetch('/messages.json');
+
+      if (!response.ok) {
+        console.warn('Could not load messages.json, using fallback');
+        return;
+      }
+
+      const data = await response.json();
+      const currentDate = data.current;
+      const currentMessage = data.messages[currentDate];
+
+      if (currentMessage && currentMessage.words) {
+        this.message = currentMessage.words;
+        console.log('Loaded message from messages.json:', this.message);
+      } else {
+        console.warn('No message found for current date:', currentDate);
+      }
+    } catch (error) {
+      console.warn('Failed to load current message:', error);
+      // Keep using the fallback message set in constructor
+    }
   }
 
   /**

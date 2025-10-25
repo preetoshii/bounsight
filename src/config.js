@@ -37,7 +37,7 @@ export const config = {
 
   // === GELATO (SPRINGBOARDS) ===
   gelato: {
-    maxLength: 150,           // Maximum line length in pixels (enforced during drawing)
+    maxLength: 230,           // Maximum line length in pixels (enforced during drawing)
     thickness: 4,             // Visual line thickness in pixels
     springBoost: 2.5,         // Trampoline bounce multiplier (1.0 = normal physics, 2.5 = 250% bounce back)
     maxActiveGelatos: 1,      // How many Gelatos can exist simultaneously (currently: 1)
