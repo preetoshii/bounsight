@@ -38,9 +38,9 @@ export function useHorizontalScroll(scrollViewRef) {
         if (canScrollLeft || canScrollRight) {
           e.preventDefault();
           // Translate vertical wheel movement to horizontal scroll
-          // Use instant scrolling (no 'smooth') to work better with snap points
-          // Much lower sensitivity for gradual card-by-card scrolling
-          el.scrollBy(e.deltaY * 0.1, 0);
+          // Use smooth behavior with full deltaY to allow momentum and skipping
+          // The snap points will still take effect after scrolling stops
+          el.scrollBy({ left: e.deltaY, behavior: 'smooth' });
         }
       };
 
