@@ -330,6 +330,8 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
   const handlePreview = () => {
     playSound('click');
     playSound('preview');
+    // Pass the edited text to parent before navigating to preview
+    onSelectDate(editingDate, editingText);
     onPreview();
   };
 
