@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Animated } from 'react-native';
 import { CalendarView } from './CalendarView';
 import { EditView } from './EditView';
+import { PreviewMode } from './PreviewMode';
 import { Confirmation } from './Confirmation';
 
 /**
  * AdminPortal - Root component for admin interface
  * Manages view state and fade transitions between views
  */
-export function AdminPortal({ onClose, onShowPreview }) {
-  const [currentView, setCurrentView] = useState('calendar'); // 'calendar' | 'edit' | 'confirmation'
+export function AdminPortal({ onClose }) {
+  const [currentView, setCurrentView] = useState('calendar'); // 'calendar' | 'edit' | 'preview' | 'confirmation'
   const [editingDate, setEditingDate] = useState(null); // Date being edited
   const [draftMessage, setDraftMessage] = useState(''); // Message being composed
   const [scheduledMessages, setScheduledMessages] = useState({}); // All scheduled messages
@@ -21,17 +22,9 @@ export function AdminPortal({ onClose, onShowPreview }) {
     setCurrentView('edit');
   };
 
-  // Navigate to preview mode (uses main game with preview overlay)
+  // Navigate to preview mode
   const openPreview = () => {
-    onShowPreview({
-      message: draftMessage,
-      isActive: isEditingToday(),
-      onBack: () => {
-        onShowPreview(null); // Exit preview mode
-        // Stay in edit view
-      },
-      onSave: isEditingToday() ? sendNow : saveMessage,
-    });
+    setCurrentView('preview');
   };
 
   // Navigate back to calendar
@@ -85,6 +78,15 @@ export function AdminPortal({ onClose, onShowPreview }) {
           onMessageChange={setDraftMessage}
           onBack={backToCalendar}
           onPreview={openPreview}
+        />
+      )}
+
+      {currentView === 'preview' && (
+        <PreviewMode
+          message={draftMessage}
+          isActive={isEditingToday()}
+          onBack={() => setCurrentView('edit')}
+          onSave={isEditingToday() ? sendNow : saveMessage}
         />
       )}
 
