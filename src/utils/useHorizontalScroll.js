@@ -38,7 +38,9 @@ export function useHorizontalScroll(scrollViewRef) {
         if (canScrollLeft || canScrollRight) {
           e.preventDefault();
           // Translate vertical wheel movement to horizontal scroll
-          el.scrollBy({ left: e.deltaY, behavior: 'smooth' });
+          // Use instant scrolling (no 'smooth') to work better with snap points
+          // Reduce sensitivity by dividing deltaY
+          el.scrollBy(e.deltaY * 0.5, 0);
         }
       };
 
