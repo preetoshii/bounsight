@@ -90,12 +90,14 @@ function CardItem({
       return {
         borderColor: `rgba(255, 255, 255, ${borderOpacity.value})`,
         backgroundColor: `rgba(255, 255, 255, ${backgroundOpacity.value})`,
+        transform: [{ scale: scale.value }],
       };
     } else {
       // Empty card or editing: dark background, white text
       return {
         borderColor: `rgba(255, 255, 255, ${borderOpacity.value})`,
         backgroundColor: `rgba(17, 17, 17, ${backgroundOpacity.value})`,
+        transform: [{ scale: scale.value }],
       };
     }
   });
@@ -120,6 +122,23 @@ function CardItem({
             if (!isEditing) {
               e.stopPropagation();
               handleCardPress(slot.date, message?.text || '', isEditable, cardIndex);
+            }
+          }}
+          onPressIn={() => {
+            if (!slot.isPast && !isEditing) {
+              // Spring animation on press down
+              scale.value = withSpring(1.3, {
+                damping: 15,
+                stiffness: 200,
+              });
+            }
+          }}
+          onPressOut={() => {
+            if (!slot.isPast) {
+              // Smooth ease back on release
+              scale.value = withTiming(1, {
+                duration: 150,
+              });
             }
           }}
           disabled={slot.isPast}
