@@ -171,7 +171,7 @@ function CardItem({
 /**
  * CalendarView - Horizontal scrolling card-based calendar
  */
-export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initialEditingDate, initialEditingText, scrollToDate, onScrollComplete, isEditMode }) {
+export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initialEditingDate, initialEditingText, scrollToDate, onScrollComplete }) {
   const { width, height } = Dimensions.get('window');
   const scrollViewRef = useRef(null);
   const textInputRefs = useRef({}).current;

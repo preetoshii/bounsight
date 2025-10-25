@@ -11,8 +11,8 @@ import { fetchMessages, saveMessage as saveMessageToGitHub } from './githubApi';
  * Manages view state and fade transitions between views
  */
 export function AdminPortal({ onClose }) {
-  const [currentView, setCurrentView] = useState('calendar'); // 'calendar' | 'edit' | 'preview' | 'confirmation'
-  const [editingDate, setEditingDate] = useState(null); // Date being edited
+  const [currentView, setCurrentView] = useState('calendar'); // 'calendar' | 'preview' | 'confirmation'
+  const [editingDate, setEditingDate] = useState(null); // Date being edited (when set, card is in edit mode)
   const [draftMessage, setDraftMessage] = useState(''); // Message being composed
   const [scheduledMessages, setScheduledMessages] = useState({}); // All scheduled messages
   const [scrollToDate, setScrollToDate] = useState(null); // Date to scroll to when returning to calendar
@@ -45,11 +45,10 @@ export function AdminPortal({ onClose }) {
     }
   };
 
-  // Navigate to edit mode when clicking a card (just sets state, no fade needed)
+  // When clicking a card, just set editing state (card expands in place)
   const openEdit = (date, message) => {
     setEditingDate(date);
     setDraftMessage(message);
-    setCurrentView('edit');
   };
 
   // Navigate to preview mode from edit mode
@@ -69,15 +68,15 @@ export function AdminPortal({ onClose }) {
     });
   };
 
-  // Navigate back from preview to edit
-  const backToEdit = () => {
-    // Fade out preview first, then fade in calendar (with edit state)
+  // Navigate back from preview to calendar (with edit state preserved)
+  const backFromPreview = () => {
+    // Fade out preview first, then fade in calendar
     Animated.timing(previewOpacity, {
       toValue: 0,
       duration: 200,
       useNativeDriver: true,
     }).start(() => {
-      setCurrentView('edit');
+      setCurrentView('calendar');
       Animated.timing(calendarOpacity, {
         toValue: 1,
         duration: 200,
@@ -86,9 +85,8 @@ export function AdminPortal({ onClose }) {
     });
   };
 
-  // Navigate back from edit to calendar
-  const backToCalendar = () => {
-    setCurrentView('calendar');
+  // Exit edit mode (collapse card)
+  const exitEdit = () => {
     setEditingDate(null);
     setDraftMessage('');
   };
@@ -163,19 +161,19 @@ export function AdminPortal({ onClose }) {
     return editingDate === today;
   };
 
-  // Handle back button based on current view
+  // Handle back button - simple and direct
   const handleBack = () => {
     if (currentView === 'confirmation') {
       // Confirmation → Preview
       setCurrentView('preview');
     } else if (currentView === 'preview') {
-      // Preview → Edit
-      backToEdit();
-    } else if (currentView === 'edit') {
-      // Edit → Calendar
-      backToCalendar();
+      // Preview → Calendar (with card still expanded)
+      backFromPreview();
+    } else if (currentView === 'calendar' && editingDate) {
+      // Calendar with expanded card → Collapse card
+      exitEdit();
     } else if (currentView === 'calendar') {
-      // Calendar → Game (close portal)
+      // Calendar (normal) → Close portal
       onClose();
     }
   };
@@ -190,7 +188,7 @@ export function AdminPortal({ onClose }) {
         <Feather name="arrow-left" size={28} color="#ffffff" />
       </TouchableOpacity>
       {/* Calendar View - always rendered for smooth transitions */}
-      <Animated.View style={[styles.fullScreen, { opacity: calendarOpacity, pointerEvents: (currentView === 'calendar' || currentView === 'edit') ? 'auto' : 'none' }]}>
+      <Animated.View style={[styles.fullScreen, { opacity: calendarOpacity, pointerEvents: currentView === 'calendar' ? 'auto' : 'none' }]}>
         <CalendarView
           scheduledMessages={scheduledMessages}
           onSelectDate={openEdit}
@@ -199,7 +197,6 @@ export function AdminPortal({ onClose }) {
           initialEditingText={draftMessage}
           scrollToDate={scrollToDate}
           onScrollComplete={() => setScrollToDate(null)}
-          isEditMode={currentView === 'edit'}
         />
       </Animated.View>
 
