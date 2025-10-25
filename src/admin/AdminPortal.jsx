@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Animated, TouchableOpacity, Text } from 'react-native';
+import { View, StyleSheet, Animated, Text } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { CalendarView } from './CalendarView';
 import { PreviewMode } from './PreviewMode';
@@ -7,6 +7,7 @@ import { Confirmation } from './Confirmation';
 import { fetchMessages, saveMessage as saveMessageToGitHub } from './githubApi';
 import { playSound } from '../utils/audio';
 import { generateAudioForMessage } from '../services/wordAudioService';
+import { Button } from '../components/Button';
 
 /**
  * AdminPortal - Root component for admin interface
@@ -276,12 +277,12 @@ export function AdminPortal({ onClose, preloadedData }) {
   return (
     <View style={styles.container}>
       {/* Single persistent back button */}
-      <TouchableOpacity
+      <Button
         onPress={handleBack}
         style={styles.backButton}
       >
         <Feather name="arrow-left" size={28} color="#ffffff" />
-      </TouchableOpacity>
+      </Button>
       {/* Calendar View - always rendered for smooth transitions */}
       <Animated.View style={[styles.fullScreen, { opacity: calendarOpacity, pointerEvents: currentView === 'calendar' ? 'auto' : 'none' }]}>
         <CalendarView
