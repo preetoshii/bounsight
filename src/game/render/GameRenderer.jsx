@@ -36,7 +36,7 @@ function WaveLetter({ letter, index, totalLetters }) {
 
   useEffect(() => {
     // Stagger the animation based on letter index
-    const delayBetweenLetters = 80; // 80ms delay between each letter
+    const delayBetweenLetters = 120; // 120ms delay between each letter (slower wave)
     const initialDelay = index * delayBetweenLetters;
     const waitAfterWave = (totalLetters - index - 1) * delayBetweenLetters;
 
@@ -44,29 +44,29 @@ function WaveLetter({ letter, index, totalLetters }) {
       Animated.sequence([
         // Wait for this letter's turn
         Animated.delay(initialDelay),
-        // Wave up
+        // Wave up (subtle and slow)
         Animated.parallel([
           Animated.timing(translateY, {
-            toValue: -20,
-            duration: 200,
+            toValue: -8,
+            duration: 400,
             useNativeDriver: true,
           }),
           Animated.timing(scale, {
-            toValue: 1.3,
-            duration: 200,
+            toValue: 1.08,
+            duration: 400,
             useNativeDriver: true,
           }),
         ]),
-        // Wave down
+        // Wave down (subtle and slow)
         Animated.parallel([
           Animated.timing(translateY, {
             toValue: 0,
-            duration: 200,
+            duration: 400,
             useNativeDriver: true,
           }),
           Animated.timing(scale, {
             toValue: 1,
-            duration: 200,
+            duration: 400,
             useNativeDriver: true,
           }),
         ]),
