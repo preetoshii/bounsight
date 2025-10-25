@@ -12,48 +12,48 @@ if (typeof document !== 'undefined') {
 }
 
 /**
- * WobblingText - Animated text with wobble effect
+ * RippleText - Animated text with ripple/wave distortion effect
  */
-function WobblingText({ text, opacity }) {
-  const rotation = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(1)).current;
+function RippleText({ text, opacity }) {
+  const skewX = useRef(new Animated.Value(0)).current;
+  const skewY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Create wobbling animation loop
-    const wobbleAnimation = Animated.loop(
+    // Create rippling wave animation loop
+    const rippleAnimation = Animated.loop(
       Animated.parallel([
-        // Rotate back and forth
+        // Horizontal skew wave
         Animated.sequence([
-          Animated.timing(rotation, {
+          Animated.timing(skewX, {
             toValue: 1,
-            duration: 150,
-            useNativeDriver: true,
-          }),
-          Animated.timing(rotation, {
-            toValue: -1,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-          Animated.timing(rotation, {
-            toValue: 0,
-            duration: 150,
-            useNativeDriver: true,
-          }),
-        ]),
-        // Pulse scale
-        Animated.sequence([
-          Animated.timing(scale, {
-            toValue: 1.05,
             duration: 200,
             useNativeDriver: true,
           }),
-          Animated.timing(scale, {
-            toValue: 0.95,
+          Animated.timing(skewX, {
+            toValue: -1,
             duration: 400,
             useNativeDriver: true,
           }),
-          Animated.timing(scale, {
-            toValue: 1,
+          Animated.timing(skewX, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]),
+        // Vertical skew wave (slightly offset timing for more dynamic feel)
+        Animated.sequence([
+          Animated.timing(skewY, {
+            toValue: -0.5,
+            duration: 250,
+            useNativeDriver: true,
+          }),
+          Animated.timing(skewY, {
+            toValue: 0.5,
+            duration: 350,
+            useNativeDriver: true,
+          }),
+          Animated.timing(skewY, {
+            toValue: 0,
             duration: 200,
             useNativeDriver: true,
           }),
@@ -61,12 +61,17 @@ function WobblingText({ text, opacity }) {
       ])
     );
 
-    wobbleAnimation.start();
+    rippleAnimation.start();
 
-    return () => wobbleAnimation.stop();
+    return () => rippleAnimation.stop();
   }, [text]);
 
-  const rotationInterpolate = rotation.interpolate({
+  const skewXInterpolate = skewX.interpolate({
+    inputRange: [-1, 1],
+    outputRange: ['-5deg', '5deg'],
+  });
+
+  const skewYInterpolate = skewY.interpolate({
     inputRange: [-1, 1],
     outputRange: ['-3deg', '3deg'],
   });
@@ -78,8 +83,8 @@ function WobblingText({ text, opacity }) {
         {
           opacity,
           transform: [
-            { rotate: rotationInterpolate },
-            { scale },
+            { skewX: skewXInterpolate },
+            { skewY: skewYInterpolate },
           ],
         },
       ]}
@@ -326,10 +331,10 @@ export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], 
 
       </Canvas>
 
-      {/* Word overlay with wobbling animation */}
+      {/* Word overlay with ripple distortion animation */}
       {currentWord && wordOpacity > 0 && (
         <View style={styles.wordContainer} pointerEvents="none">
-          <WobblingText text={currentWord.text} opacity={wordOpacity} />
+          <RippleText text={currentWord.text} opacity={wordOpacity} />
         </View>
       )}
     </View>
