@@ -1,9 +1,65 @@
 {
   "current": "2025-10-25",
   "messages": {
+    "2025-10-18": {
+      "text": "you are braver than you believe",
+      "words": ["you", "are", "braver", "than", "you", "believe"]
+    },
+    "2025-10-19": {
+      "text": "your kindness makes the world better",
+      "words": ["your", "kindness", "makes", "the", "world", "better"]
+    },
+    "2025-10-20": {
+      "text": "you deserve good things",
+      "words": ["you", "deserve", "good", "things"]
+    },
+    "2025-10-21": {
+      "text": "your presence matters more than you know",
+      "words": ["your", "presence", "matters", "more", "than", "you", "know"]
+    },
+    "2025-10-22": {
+      "text": "you are exactly where you need to be",
+      "words": ["you", "are", "exactly", "where", "you", "need", "to", "be"]
+    },
+    "2025-10-23": {
+      "text": "you are capable of amazing things",
+      "words": ["you", "are", "capable", "of", "amazing", "things"]
+    },
+    "2025-10-24": {
+      "text": "you are worthy of love and belonging",
+      "words": ["you", "are", "worthy", "of", "love", "and", "belonging"]
+    },
     "2025-10-25": {
-      "text": "fuckers are loved beyond measure and nothing can change that",
-      "words": ["fuckers", "are", "loved", "beyond", "measure", "and", "nothing", "can", "change", "that"]
+      "text": "you are loved beyond measure and nothing can change that",
+      "words": ["you", "are", "loved", "beyond", "measure", "and", "nothing", "can", "change", "that"]
+    },
+    "2025-10-26": {
+      "text": "your story is still being written",
+      "words": ["your", "story", "is", "still", "being", "written"]
+    },
+    "2025-10-27": {
+      "text": "you bring light to dark places",
+      "words": ["you", "bring", "light", "to", "dark", "places"]
+    },
+    "2025-10-28": {
+      "text": "you are enough just as you are",
+      "words": ["you", "are", "enough", "just", "as", "you", "are"]
+    },
+    "2025-10-30": {
+      "text": "your vulnerability is your strength",
+      "words": ["your", "vulnerability", "is", "your", "strength"]
+    },
+    "2025-11-01": {
+      "text": "you are making progress even when you can't see it",
+      "words": ["you", "are", "making", "progress", "even", "when", "you", "can't", "see", "it"]
+    },
+    "2025-11-05": {
+      "text": "you are held by something greater than fear",
+      "words": ["you", "are", "held", "by", "something", "greater", "than", "fear"]
+    },
+    "2025-11-10": {
+      "text": "you don't have to have it all figured out",
+      "words": ["you", "don't", "have", "to", "have", "it", "all", "figured", "out"]
     }
   }
 }
