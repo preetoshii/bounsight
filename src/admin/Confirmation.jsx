@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { playSound } from '../utils/audio';
 
 /**
  * Confirmation - Send Now confirmation dialog
@@ -20,11 +20,23 @@ export function Confirmation({ onCancel, onConfirm }) {
         </Text>
 
         <View style={styles.buttons}>
-          <Pressable style={styles.cancelButton} onPress={onCancel}>
+          <Pressable
+            style={styles.cancelButton}
+            onPress={() => {
+              playSound('click');
+              onCancel();
+            }}
+          >
             <Text style={styles.cancelButtonText}>Cancel</Text>
           </Pressable>
 
-          <Pressable style={styles.confirmButton} onPress={onConfirm}>
+          <Pressable
+            style={styles.confirmButton}
+            onPress={() => {
+              playSound('click');
+              onConfirm();
+            }}
+          >
             <Text style={styles.confirmButtonText}>Confirm</Text>
           </Pressable>
         </View>

@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Pressable } from 'react-native';
 import { GameRenderer } from '../game/render/GameRenderer';
 import { GameCore } from '../game/core/GameCore';
 import { config } from '../config';
 import { preloadMessageAudio } from '../services/audioPlayer';
-import { Pressable } from 'react-native';
+import { playSound } from '../utils/audio';
 
 /**
  * PreviewMode - Game preview with draft message and overlay controls
@@ -185,7 +185,13 @@ export function PreviewMode({ message, isActive, onSave }) {
 
         {/* Save/Send Now button (bottom-center) */}
         <View style={styles.saveButtonContainer} pointerEvents="auto">
-          <Pressable style={styles.saveButton} onPress={onSave}>
+          <Pressable
+            style={styles.saveButton}
+            onPress={() => {
+              playSound('click');
+              onSave();
+            }}
+          >
             <Text style={styles.saveButtonText}>
               {isActive ? 'Send Now' : 'Save'}
             </Text>

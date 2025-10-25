@@ -403,12 +403,15 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
           ]}
           pointerEvents={editingText.trim() ? 'auto' : 'none'} // Prevent clicks when hidden off-screen or disabled
         >
-          <Button
+          <Pressable
             style={[
               styles.previewButton,
               !editingText.trim() && styles.previewButtonDisabled
             ]}
-            onPress={handlePreview}
+            onPress={() => {
+              playSound('click');
+              handlePreview();
+            }}
             disabled={!editingText.trim()}
           >
             <View style={styles.previewButtonContent}>
