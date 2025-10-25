@@ -46,6 +46,9 @@ export function GameApp() {
   const [audioGenerating, setAudioGenerating] = useState(false);
   const [audioGenStatus, setAudioGenStatus] = useState('');
 
+  // Remount counter - increment to force remount main game
+  const [gameMountKey, setGameMountKey] = useState(0);
+
   // Initialize physics once on mount
   useEffect(() => {
     // Initialize physics with current dimensions
@@ -243,19 +246,23 @@ export function GameApp() {
       Animated.timing(gameOpacity, { toValue: 1, duration: 200, useNativeDriver: true })
     ]).start(() => {
       setShowAdmin(false);
+      // Force remount of main game to reset physics and stop dual instances
+      setGameMountKey(prev => prev + 1);
     });
   };
 
   return (
     <View style={styles.container}>
-      {/* Game view with fade animation */}
-      <Animated.View
-        style={[styles.fullScreen, { opacity: gameOpacity, pointerEvents: showAdmin ? 'none' : 'auto' }]}
-        onStartShouldSetResponder={() => true}
-        onResponderGrant={handleTouchStart}
-        onResponderMove={handleTouchMove}
-        onResponderRelease={handleTouchEnd}
-      >
+      {/* Game view - unmount completely when admin is open */}
+      {!showAdmin && (
+        <Animated.View
+          key={gameMountKey}
+          style={[styles.fullScreen, { opacity: gameOpacity }]}
+          onStartShouldSetResponder={() => true}
+          onResponderGrant={handleTouchStart}
+          onResponderMove={handleTouchMove}
+          onResponderRelease={handleTouchEnd}
+        >
         <GameRenderer
           width={dimensions.width}
           height={dimensions.height}
@@ -277,6 +284,7 @@ export function GameApp() {
           </TouchableOpacity>
         </Animated.View>
       </Animated.View>
+      )}
 
       {/* Admin portal with fade animation */}
       {showAdmin && (
