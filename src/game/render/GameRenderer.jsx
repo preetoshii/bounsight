@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Canvas, Circle, Fill, Line, Rect, vec, DashPathEffect, Path, Skia } from '@shopify/react-native-skia';
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet, Animated } from 'react-native';
 import { config } from '../../config';
 
 // Load Inter font (clean, geometric, open-source)
@@ -9,6 +9,84 @@ if (typeof document !== 'undefined') {
   link.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400&display=swap';
   link.rel = 'stylesheet';
   document.head.appendChild(link);
+}
+
+/**
+ * WobblingText - Animated text with wobble effect
+ */
+function WobblingText({ text, opacity }) {
+  const rotation = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    // Create wobbling animation loop
+    const wobbleAnimation = Animated.loop(
+      Animated.parallel([
+        // Rotate back and forth
+        Animated.sequence([
+          Animated.timing(rotation, {
+            toValue: 1,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+          Animated.timing(rotation, {
+            toValue: -1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(rotation, {
+            toValue: 0,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+        ]),
+        // Pulse scale
+        Animated.sequence([
+          Animated.timing(scale, {
+            toValue: 1.05,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scale, {
+            toValue: 0.95,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scale, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]),
+      ])
+    );
+
+    wobbleAnimation.start();
+
+    return () => wobbleAnimation.stop();
+  }, [text]);
+
+  const rotationInterpolate = rotation.interpolate({
+    inputRange: [-1, 1],
+    outputRange: ['-3deg', '3deg'],
+  });
+
+  return (
+    <Animated.Text
+      style={[
+        styles.word,
+        {
+          opacity,
+          transform: [
+            { rotate: rotationInterpolate },
+            { scale },
+          ],
+        },
+      ]}
+    >
+      {text}
+    </Animated.Text>
+  );
 }
 
 /**
@@ -248,12 +326,10 @@ export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], 
 
       </Canvas>
 
-      {/* Word overlay using React Native Text (works on all platforms!) */}
+      {/* Word overlay with wobbling animation */}
       {currentWord && wordOpacity > 0 && (
         <View style={styles.wordContainer} pointerEvents="none">
-          <Text style={[styles.word, { opacity: wordOpacity }]}>
-            {currentWord.text}
-          </Text>
+          <WobblingText text={currentWord.text} opacity={wordOpacity} />
         </View>
       )}
     </View>
@@ -275,8 +351,5 @@ const styles = StyleSheet.create({
     fontSize: config.visuals.wordFontSize,
     color: config.visuals.wordColor,
     letterSpacing: 1,
-    textShadowColor: 'rgba(255, 255, 255, 0.5)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 20,
   },
 });
