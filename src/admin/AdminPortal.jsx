@@ -109,29 +109,30 @@ export function AdminPortal({ onClose }) {
 
     try {
       const savedDate = editingDate;
+      const savedMessage = draftMessage;
 
       // Save to GitHub (makeCurrent = false for future dates)
-      const updatedData = await saveMessageToGitHub(savedDate, draftMessage, false);
+      const updatedData = await saveMessageToGitHub(savedDate, savedMessage, false);
 
       // Update local state
       setMessagesData(updatedData);
       setScheduledMessages(updatedData.messages || {});
 
-      // Clear editing state so we return to normal calendar view (not edit mode)
+      console.log('Saved message for', savedDate);
+
+      // Clear editing state AFTER successful save so we return to normal calendar view (not edit mode)
       setScrollToDate(savedDate); // Remember which card to scroll to
       setEditingDate(null);
       setDraftMessage('');
 
-      console.log('Saved message for', savedDate);
+      // Fade back to calendar
+      backFromPreview();
     } catch (error) {
       console.error('Failed to save message:', error);
       // TODO: Show error to user
       alert('Failed to save message. Please try again.');
       return; // Don't navigate away on error
     }
-
-    // Fade back to calendar
-    backFromPreview();
   };
 
   // Send now (for active message)
@@ -158,29 +159,30 @@ export function AdminPortal({ onClose }) {
 
     try {
       const savedDate = editingDate;
+      const savedMessage = draftMessage;
 
       // Save to GitHub with makeCurrent = true (updates both message and current pointer)
-      const updatedData = await saveMessageToGitHub(savedDate, draftMessage, true);
+      const updatedData = await saveMessageToGitHub(savedDate, savedMessage, true);
 
       // Update local state
       setMessagesData(updatedData);
       setScheduledMessages(updatedData.messages || {});
 
-      // Clear editing state
+      console.log('Sent message now for', savedDate);
+
+      // Clear editing state AFTER successful save
       setScrollToDate(savedDate); // Remember which card to scroll to
       setEditingDate(null);
       setDraftMessage('');
 
-      console.log('Sent message now for', savedDate);
+      // Close admin portal and return to game
+      onClose();
     } catch (error) {
       console.error('Failed to send message:', error);
       // TODO: Show error to user
       alert('Failed to send message. Please try again.');
       return; // Don't navigate away on error
     }
-
-    // Close admin portal and return to game
-    onClose();
   };
 
   // Check if editing today's message
