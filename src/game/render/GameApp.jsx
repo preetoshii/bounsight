@@ -272,7 +272,7 @@ export function GameApp() {
       </Animated.View>
 
       {/* Admin portal with fade animation */}
-      {showAdmin && (
+      {showAdmin && !previewMode && (
         <Animated.View style={[styles.fullScreen, { opacity: adminOpacity }]}>
           <AdminPortal
             onClose={closeAdmin}
