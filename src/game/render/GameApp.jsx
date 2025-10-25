@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Dimensions, TouchableOpacity, Text, Animated, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Dimensions, Pressable, Text, Animated, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
 import { GameRenderer } from './GameRenderer';
@@ -339,12 +339,9 @@ export function GameApp() {
           />
 
           {/* Admin Button - Feather Icon */}
-          <View style={{ position: 'absolute', top: 50, right: 50, backgroundColor: 'red', padding: 20 }}>
-            <Text style={{ color: 'white' }}>ADMIN DEBUG</Text>
-          </View>
-          <Button onPress={openAdmin} style={styles.adminButton}>
+          <Pressable onPress={openAdmin} style={styles.adminButton}>
             <Feather name="feather" size={20} color="#ffffff" style={{ opacity: 0.6 }} />
-          </Button>
+          </Pressable>
         </View>
       )}
 
