@@ -49,6 +49,9 @@ export function GameApp() {
   // Remount counter - increment to force remount main game
   const [gameMountKey, setGameMountKey] = useState(0);
 
+  // Animation frame ref (needs to be accessible to pause/resume)
+  const animationFrameId = useRef(null);
+
   // Initialize physics once on mount
   useEffect(() => {
     // Initialize physics with current dimensions
@@ -100,7 +103,6 @@ export function GameApp() {
 
     loadOrGenerateAudio();
 
-    let animationFrameId;
     let lastTime = performance.now();
 
     const animate = (currentTime) => {
@@ -132,18 +134,62 @@ export function GameApp() {
       forceUpdate(n => n + 1);
 
       // Continue animation loop
-      animationFrameId = requestAnimationFrame(animate);
+      animationFrameId.current = requestAnimationFrame(animate);
     };
 
-    animationFrameId = requestAnimationFrame(animate);
+    animationFrameId.current = requestAnimationFrame(animate);
 
     return () => {
-      cancelAnimationFrame(animationFrameId);
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
       if (gameCore.current) {
         gameCore.current.destroy();
       }
     };
   }, []); // Only on mount
+
+  // Pause/resume animation when admin portal opens/closes
+  useEffect(() => {
+    if (showAdmin) {
+      // Pause animation loop when admin opens
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+        animationFrameId.current = null;
+      }
+    } else {
+      // Resume animation loop when admin closes (if not already running)
+      if (!animationFrameId.current && gameCore.current) {
+        let lastTime = performance.now();
+
+        const animate = (currentTime) => {
+          const deltaTime = currentTime - lastTime;
+          lastTime = currentTime;
+
+          const cappedDelta = Math.min(deltaTime, 16.667);
+          gameCore.current.step(cappedDelta);
+
+          mascotPos.current = gameCore.current.getMascotPosition();
+          obstacles.current = gameCore.current.getObstacles();
+          bounceImpact.current = gameCore.current.getBounceImpact();
+          gelatoCreationTime.current = gameCore.current.getGelatoCreationTime();
+          currentWord.current = gameCore.current.getCurrentWord();
+          mascotVelocityY.current = gameCore.current.getMascotVelocityY();
+
+          const currentGelatoData = gameCore.current.getGelatoLineData();
+          if (currentGelatoData !== lastGelatoData.current) {
+            lastGelatoData.current = currentGelatoData;
+            setLines(currentGelatoData ? [currentGelatoData] : []);
+          }
+
+          forceUpdate(n => n + 1);
+          animationFrameId.current = requestAnimationFrame(animate);
+        };
+
+        animationFrameId.current = requestAnimationFrame(animate);
+      }
+    }
+  }, [showAdmin])
 
   // Handle window resize - update boundaries without resetting game
   useEffect(() => {
@@ -233,64 +279,58 @@ export function GameApp() {
   // Admin portal toggle functions
   const openAdmin = () => {
     playSound('card-slide');
+    // Reset admin opacity to 1 before showing
+    adminOpacity.setValue(1);
     setShowAdmin(true);
-    Animated.parallel([
-      Animated.timing(gameOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
-      Animated.timing(adminOpacity, { toValue: 1, duration: 200, useNativeDriver: true })
-    ]).start();
   };
 
   const closeAdmin = () => {
-    Animated.parallel([
-      Animated.timing(adminOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
-      Animated.timing(gameOpacity, { toValue: 1, duration: 200, useNativeDriver: true })
-    ]).start(() => {
-      setShowAdmin(false);
-      // Force remount of main game to reset physics and stop dual instances
-      setGameMountKey(prev => prev + 1);
-    });
+    setShowAdmin(false);
+    // Reset game opacity to 1 and force remount of main game to reset physics
+    gameOpacity.setValue(1);
+    setGameMountKey(prev => prev + 1);
   };
 
   return (
     <View style={styles.container}>
       {/* Game view - unmount completely when admin is open */}
       {!showAdmin && (
-        <Animated.View
+        <View
           key={gameMountKey}
-          style={[styles.fullScreen, { opacity: gameOpacity }]}
+          style={styles.fullScreen}
           onStartShouldSetResponder={() => true}
           onResponderGrant={handleTouchStart}
           onResponderMove={handleTouchMove}
           onResponderRelease={handleTouchEnd}
         >
-        <GameRenderer
-          width={dimensions.width}
-          height={dimensions.height}
-          mascotX={mascotPos.current.x}
-          mascotY={mascotPos.current.y}
-          obstacles={obstacles.current}
-          lines={lines}
-          currentPath={currentPath}
-          bounceImpact={bounceImpact.current}
-          gelatoCreationTime={gelatoCreationTime.current}
-          currentWord={currentWord.current}
-          mascotVelocityY={mascotVelocityY.current}
-        />
+          <GameRenderer
+            width={dimensions.width}
+            height={dimensions.height}
+            mascotX={mascotPos.current.x}
+            mascotY={mascotPos.current.y}
+            obstacles={obstacles.current}
+            lines={lines}
+            currentPath={currentPath}
+            bounceImpact={bounceImpact.current}
+            gelatoCreationTime={gelatoCreationTime.current}
+            currentWord={currentWord.current}
+            mascotVelocityY={mascotVelocityY.current}
+          />
 
-        {/* Admin Button - Feather Icon */}
-        <Animated.View style={[styles.adminButton, { opacity: gameOpacity }]}>
-          <TouchableOpacity onPress={openAdmin} style={styles.adminButtonTouchable}>
-            <Feather name="feather" size={20} color="#ffffff" style={{ opacity: 0.6 }} />
-          </TouchableOpacity>
-        </Animated.View>
-      </Animated.View>
+          {/* Admin Button - Feather Icon */}
+          <View style={styles.adminButton}>
+            <TouchableOpacity onPress={openAdmin} style={styles.adminButtonTouchable}>
+              <Feather name="feather" size={20} color="#ffffff" style={{ opacity: 0.6 }} />
+            </TouchableOpacity>
+          </View>
+        </View>
       )}
 
-      {/* Admin portal with fade animation */}
+      {/* Admin portal - unmount when closed */}
       {showAdmin && (
-        <Animated.View style={[styles.fullScreen, { opacity: adminOpacity }]}>
+        <View style={styles.fullScreen}>
           <AdminPortal onClose={closeAdmin} />
-        </Animated.View>
+        </View>
       )}
 
       {/* Audio generation status indicator */}
