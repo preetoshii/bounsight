@@ -127,7 +127,7 @@ function CardItem({
           onPressIn={() => {
             if (!slot.isPast && !isEditing) {
               // Spring animation on press down
-              scale.value = withSpring(1.3, {
+              scale.value = withSpring(1.1, {
                 damping: 15,
                 stiffness: 200,
               });
