@@ -19,13 +19,14 @@ export function Button({
   children,
   style,
   disabled = false,
-  scaleAmount = 1.4,
+  scaleAmount = 1.3,
   ...otherProps
 }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
     if (disabled) return;
+    // Spring animation on press down - bouncy and energetic
     Animated.spring(scaleAnim, {
       toValue: scaleAmount,
       useNativeDriver: true,
@@ -35,11 +36,11 @@ export function Button({
   };
 
   const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
+    // Simple ease on release - smooth and quick
+    Animated.timing(scaleAnim, {
       toValue: 1,
+      duration: 150,
       useNativeDriver: true,
-      friction: 5,
-      tension: 200,
     }).start();
   };
 
