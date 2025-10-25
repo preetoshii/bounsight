@@ -456,126 +456,55 @@ class VoiceQueue {
 
 ---
 
-## 9) In-App Admin Portal Philosophy
+## 9) In-App Admin Architecture
 
-### Why In-App Instead of Separate Portal
+### Design Rationale
 
-**Design Goal:** Make the admin experience as simple and delightful as the player experience.
+Admin functionality lives directly in the game app rather than a separate web portal. This means message updates happen within the game itself—no context switching, no separate deployment. The admin UX is as simple as the player UX.
 
-Instead of maintaining a separate admin web portal that requires:
-- Opening a browser
-- Navigating to a different URL
-- Logging in with traditional credentials
-- Context-switching away from the game
+### Gestural Password: The Staircase
 
-We integrate admin functionality **directly into the game itself**. This means:
-- ✅ Everything lives in one place
-- ✅ Update messages while experiencing the game
-- ✅ No separate deployment or infrastructure for admin UI
-- ✅ Admin UX is as thoughtfully designed as player UX
-- ✅ Can preview changes in real-time within the actual game context
+Authentication is performed through gameplay rather than traditional credentials. The unlock pattern: **5 consecutive bounces where each bounce is progressively higher on screen AND each Gelato is progressively shorter (≥20% narrower each time).**
 
-### The Gestural Password: Ascending Staircase
+This approach:
+- Uses existing game mechanics (no separate auth UI)
+- Requires intentional skill to execute (won't happen accidentally)
+- Feels like discovering a secret rather than logging in
+- Even if reverse-engineered, must be physically performed
 
-**Concept:** The admin "password" is not a string you type—it's a **skill you demonstrate using the game's core mechanics**.
+### Architecture
 
-**The Pattern:**
-- Execute 5 consecutive bounces where:
-  1. Each bounce is progressively HIGHER on screen (ascending Y positions)
-  2. Each Gelato is progressively SHORTER in width (narrowing by ≥20% each time)
+**Client-side (baked into app):**
+- Staircase validation logic
+- Admin UI components (hidden)
+- GitHub API token
 
-**Why this works beautifully:**
-- 🎮 **Uses existing game mechanics** - No separate auth UI needed
-- 🎨 **Elegant and playful** - Feels like a secret level unlock, not a boring login
-- 🔒 **Naturally obscure** - Requires intentional, skilled execution (won't happen accidentally)
-- 🎯 **Hard to discover** - Even if someone reverse-engineers the app, they must physically perform the pattern
-- 🔄 **Easy to remember** - "Climb the staircase with shrinking steps"
-- ✨ **On-brand** - Admin authentication becomes a mini-game that matches Bounsight's minimalist, tactile aesthetic
+**Server-side (GitHub repo):**
+- `current-message.json` (fetched by all users)
 
-**Example successful sequence:**
-```
-Bounce 1: y=500, gelatoWidth=100px
-Bounce 2: y=400, gelatoWidth=80px  (20% shorter)
-Bounce 3: y=300, gelatoWidth=60px  (25% shorter)
-Bounce 4: y=200, gelatoWidth=45px  (25% shorter)
-Bounce 5: y=100, gelatoWidth=35px  (22% shorter)
-→ Admin panel unlocks!
-```
+**Why split this way:**
+The message must live outside the app so updates don't require app store resubmission or user reinstalls. The admin validation can live client-side because only 1-2 trusted admins exist, and the staircase pattern provides sufficient obscurity for this use case.
 
-### Architecture: Client-Side Validation + GitHub Backend
+**Trade-offs:**
+- Security through obscurity (not cryptographically secure)
+- GitHub token discoverable if app is decompiled
+- Client-side validation rules visible in source
 
-**What lives where:**
+These trade-offs are acceptable for a small creative project. Worst case: someone posts a silly message (revertable via git). The GitHub token is rotatable if compromised.
 
-**Baked into the app (client-side):**
-- Staircase pattern validation logic
-- Admin UI components (hidden until unlocked)
-- GitHub API token (for updating message file)
+### Flow
 
-**Lives on GitHub (server-side):**
-- `current-message.json` - The actual message content all users fetch
+**Players:**
+1. Launch app → fetch `current-message.json` from GitHub → play
 
-**Why this hybrid approach:**
+**Admins:**
+1. Launch app → draw staircase pattern → admin panel appears → submit new message → GitHub file updates → all users get new message on next launch
 
-The message MUST live outside the app because:
-- Updating messages should not require app store resubmission
-- All users need to fetch the same current message
-- Can't be hardcoded in app code (would require rebuild + redeploy for every message change)
+### Implementation Sketch
 
-The admin validation CAN live in the app because:
-- Only 1-2 trusted admins will ever use it
-- Staircase pattern is obscure enough to protect against casual discovery
-- Even if reverse-engineered, requires intentional skill to execute
-- Simplifies architecture dramatically (no backend auth service needed)
-
-**Trade-offs we're accepting:**
-- ⚠️ **Security through obscurity** - Technically not "secure" in cryptographic sense
-- ⚠️ **Token in bundle** - GitHub token is findable if someone decompiles the app
-- ⚠️ **Client-side validation** - Pattern rules are visible in source code
-
-**Why we're okay with this:**
-- 🎲 Risk is acceptable for a 2-person creative project
-- 🎪 Worst case: someone posts a silly message (easy to revert via git history)
-- 🔄 GitHub token is rotatable if ever compromised
-- 🎯 Effort to exploit far exceeds value (it's an indie affirmation game, not a bank)
-- 🎨 Keeps the system simple and fun for us as creators
-
-**App Store compliance:**
-- Hidden admin UI is unlikely to be discovered during Apple's 10-15 minute review
-- If ever flagged, can easily make it visible-but-gated (add "Admin" button in settings)
-- Message content updates are explicitly allowed (similar to news/quotes apps)
-- No executable code is downloaded, just JSON content
-
-### The Complete Flow
-
-**Player Experience:**
-1. Launch app
-2. App fetches `current-message.json` from GitHub
-3. Play game, see current message word-by-word
-
-**Admin Experience:**
-1. Launch app (same build as players)
-2. Draw the ascending staircase pattern (5 bounces, each higher + narrower)
-3. Admin UI slides in (message text area + submit button)
-4. Type new message
-5. Hit submit
-6. App validates locally, then uses GitHub API to update `current-message.json`
-7. Done! Next time anyone launches app, they see new message
-
-**Developer Benefits:**
-- ✨ Update messages from within the game itself
-- ✨ Preview changes in real-time in the actual game context
-- ✨ No separate admin portal to maintain
-- ✨ No backend auth service to run
-- ✨ Everything lives in one codebase
-- ✨ Git history provides message version control for free
-- ✨ Admin UX is as thoughtfully designed as player UX
-
-### Implementation Details
-
-**Tracking bounce data:**
 ```javascript
-// GameCore tracks last N bounces
-this.recentBounces = []; // Array of { y, gelatoWidth, timestamp }
+// Track last 5 bounces
+this.recentBounces = []; // { y, gelatoWidth, timestamp }
 
 onBounce(gelatoWidth) {
   this.recentBounces.push({
@@ -583,89 +512,32 @@ onBounce(gelatoWidth) {
     gelatoWidth: gelatoWidth,
     timestamp: Date.now()
   });
-
-  // Keep only last 5
-  if (this.recentBounces.length > 5) {
-    this.recentBounces.shift();
-  }
-
-  // Check for staircase pattern
-  if (this.validateStaircase(this.recentBounces)) {
-    this.onAdminUnlock();
-  }
+  if (this.recentBounces.length > 5) this.recentBounces.shift();
+  if (this.validateStaircase(this.recentBounces)) this.onAdminUnlock();
 }
-```
 
-**Pattern validation:**
-```javascript
 validateStaircase(bounces) {
   if (bounces.length < 5) return false;
-
-  // Check ascending (each bounce higher than previous)
+  // Each bounce higher (Y decreasing)
   for (let i = 1; i < 5; i++) {
     if (bounces[i].y >= bounces[i-1].y) return false;
   }
-
-  // Check narrowing (each gelato ≤80% width of previous)
+  // Each gelato narrower (≤80% of previous)
   for (let i = 1; i < 5; i++) {
-    if (bounces[i].gelatoWidth >= bounces[i-1].gelatoWidth * 0.8) {
-      return false;
-    }
+    if (bounces[i].gelatoWidth >= bounces[i-1].gelatoWidth * 0.8) return false;
   }
-
   return true;
 }
 ```
 
-**GitHub API integration:**
-```javascript
-// Update message on GitHub
-async function updateMessage(newMessage) {
-  const token = GITHUB_TOKEN; // Baked into app
-  const repo = 'youruser/bounsight';
-  const path = 'current-message.json';
+GitHub API updates message file directly via token. Message tokenized into words array for consistency.
 
-  // Tokenize message
-  const words = newMessage.toLowerCase().split(/\s+/);
+### Future Options
 
-  // Get current file SHA (required for updates)
-  const fileData = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`);
-  const { sha } = await fileData.json();
+**If stronger security needed:** Migrate to Cloudflare Workers for server-side validation, move token to backend.
 
-  // Update file
-  await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-    method: 'PUT',
-    headers: {
-      'Authorization': `token ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      message: `Update message via in-app admin`,
-      content: btoa(JSON.stringify({ text: newMessage, words })),
-      sha: sha,
-    })
-  });
-}
-```
+**If Apple flags hidden UI:** Make "Admin" button visible in settings (still gated by staircase), or note it in review comments as content management for authorized users.
 
-### Future Considerations
+**Additional obscurity:** Time-based unlock windows, multi-stage patterns, velocity/timing requirements.
 
-**If we ever need stronger security:**
-- Migrate to Cloudflare Workers for server-side staircase validation
-- Move GitHub token to backend (not in app bundle)
-- Add rate limiting and attempt tracking
-- Implement session tokens with expiration
-
-**If Apple flags the hidden admin UI:**
-- Make "Admin" button visible in Settings (but still gated by staircase)
-- Add it to review notes as "content management for authorized admins"
-- Worst case: Remove in-app admin, fall back to web portal
-
-**Additional obscurity layers we could add:**
-- Time-based requirement (only works on certain days/times)
-- Multi-stage unlock (staircase reveals a secret word you must tap)
-- Velocity/timing requirements (must complete pattern within N seconds)
-- Environmental triggers (device battery level, location, etc.)
-
-**The Philosophy:**
-This approach prioritizes **simplicity, fun, and developer experience** over maximum security. For a creative project between two brothers sharing affirmations with the world, the trade-offs are well worth the delightful admin UX and architectural simplicity.
+This approach prioritizes simplicity and admin UX over maximum security—appropriate for a 2-person creative project.
