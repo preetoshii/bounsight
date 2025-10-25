@@ -122,6 +122,7 @@ function CardItem({
             {
               width: isEditing ? editCardWidth : cardSize,
               height: isEditing ? editCardHeight : cardSize,
+              padding: isEditing ? 100 : 64, // More padding when expanded
             },
             slot.isPast && styles.cardPast,
             slot.isToday && styles.cardToday,
