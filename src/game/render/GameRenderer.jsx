@@ -12,84 +12,87 @@ if (typeof document !== 'undefined') {
 }
 
 /**
- * RippleText - Animated text with ripple/wave distortion effect
+ * WaveText - Mexican wave effect where each letter waves in sequence
  */
-function RippleText({ text, opacity }) {
-  const skewX = useRef(new Animated.Value(0)).current;
-  const skewY = useRef(new Animated.Value(0)).current;
+function WaveText({ text, opacity }) {
+  const letters = text.split('');
+  const totalLetters = letters.length;
+
+  return (
+    <View style={{ flexDirection: 'row', opacity }}>
+      {letters.map((letter, index) => (
+        <WaveLetter key={`${text}-${index}`} letter={letter} index={index} totalLetters={totalLetters} />
+      ))}
+    </View>
+  );
+}
+
+/**
+ * WaveLetter - Individual letter with wave animation
+ */
+function WaveLetter({ letter, index, totalLetters }) {
+  const translateY = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    // Create rippling wave animation loop
-    const rippleAnimation = Animated.loop(
-      Animated.parallel([
-        // Horizontal skew wave
-        Animated.sequence([
-          Animated.timing(skewX, {
+    // Stagger the animation based on letter index
+    const delayBetweenLetters = 80; // 80ms delay between each letter
+    const initialDelay = index * delayBetweenLetters;
+    const waitAfterWave = (totalLetters - index - 1) * delayBetweenLetters;
+
+    const waveAnimation = Animated.loop(
+      Animated.sequence([
+        // Wait for this letter's turn
+        Animated.delay(initialDelay),
+        // Wave up
+        Animated.parallel([
+          Animated.timing(translateY, {
+            toValue: -20,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scale, {
+            toValue: 1.3,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+        ]),
+        // Wave down
+        Animated.parallel([
+          Animated.timing(translateY, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scale, {
             toValue: 1,
             duration: 200,
             useNativeDriver: true,
           }),
-          Animated.timing(skewX, {
-            toValue: -1,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-          Animated.timing(skewX, {
-            toValue: 0,
-            duration: 200,
-            useNativeDriver: true,
-          }),
         ]),
-        // Vertical skew wave (slightly offset timing for more dynamic feel)
-        Animated.sequence([
-          Animated.timing(skewY, {
-            toValue: -0.5,
-            duration: 250,
-            useNativeDriver: true,
-          }),
-          Animated.timing(skewY, {
-            toValue: 0.5,
-            duration: 350,
-            useNativeDriver: true,
-          }),
-          Animated.timing(skewY, {
-            toValue: 0,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-        ]),
+        // Wait for other letters to finish their wave
+        Animated.delay(waitAfterWave),
       ])
     );
 
-    rippleAnimation.start();
+    waveAnimation.start();
 
-    return () => rippleAnimation.stop();
-  }, [text]);
-
-  const skewXInterpolate = skewX.interpolate({
-    inputRange: [-1, 1],
-    outputRange: ['-5deg', '5deg'],
-  });
-
-  const skewYInterpolate = skewY.interpolate({
-    inputRange: [-1, 1],
-    outputRange: ['-3deg', '3deg'],
-  });
+    return () => waveAnimation.stop();
+  }, [index, totalLetters]);
 
   return (
     <Animated.Text
       style={[
         styles.word,
         {
-          opacity,
           transform: [
-            { skewX: skewXInterpolate },
-            { skewY: skewYInterpolate },
+            { translateY },
+            { scale },
           ],
         },
       ]}
     >
-      {text}
+      {letter === ' ' ? '\u00A0' : letter}
     </Animated.Text>
   );
 }
@@ -331,10 +334,10 @@ export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], 
 
       </Canvas>
 
-      {/* Word overlay with ripple distortion animation */}
+      {/* Word overlay with Mexican wave animation */}
       {currentWord && wordOpacity > 0 && (
         <View style={styles.wordContainer} pointerEvents="none">
-          <RippleText text={currentWord.text} opacity={wordOpacity} />
+          <WaveText text={currentWord.text} opacity={wordOpacity} />
         </View>
       )}
     </View>
