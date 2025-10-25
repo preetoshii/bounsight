@@ -38,9 +38,9 @@ export function useHorizontalScroll(scrollViewRef) {
         if (canScrollLeft || canScrollRight) {
           e.preventDefault();
           // Translate vertical wheel movement to horizontal scroll
-          // Use smooth behavior with full deltaY to allow momentum and skipping
-          // The snap points will still take effect after scrolling stops
-          el.scrollBy({ left: e.deltaY, behavior: 'smooth' });
+          // Use instant scrolling (auto) so scrolls accumulate and CSS scroll-snap
+          // handles the final smooth snap animation when you stop scrolling
+          el.scrollBy({ left: e.deltaY, behavior: 'auto' });
         }
       };
 
