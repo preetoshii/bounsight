@@ -49,9 +49,10 @@ export function Button({
       onPressOut={handlePressOut}
       disabled={disabled}
       activeOpacity={1} // Disable default opacity change since we're using scale
+      style={style}
       {...otherProps}
     >
-      <Animated.View style={[style, { transform: [{ scale: scaleAnim }] }]}>
+      <Animated.View style={{ transform: [{ scale: scaleAnim }], width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}>
         {children}
       </Animated.View>
     </TouchableOpacity>
