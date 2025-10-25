@@ -1,18 +1,26 @@
 import { useRef, useEffect } from 'react';
-import { Platform } from 'react-native';
+import { Platform, findNodeHandle } from 'react-native';
 
 /**
  * Custom hook to convert vertical mouse wheel scrolling to horizontal scrolling
  * Only applies to web platform with mouse wheels - doesn't affect mobile/touch scrolling
+ *
+ * Usage: Pass the ScrollView ref to this hook
  */
-export function useHorizontalScroll() {
-  const elRef = useRef();
-
+export function useHorizontalScroll(scrollViewRef) {
   useEffect(() => {
     // Only apply on web platform
     if (Platform.OS !== 'web') return;
+    if (!scrollViewRef?.current) return;
 
-    const el = elRef.current;
+    // Get the DOM node from the ScrollView ref
+    // On web, ScrollView renders as a div, so we can access it directly
+    const scrollViewNode = scrollViewRef.current;
+
+    // Try to get the underlying DOM element
+    // For react-native-web, the ref itself should be the DOM element
+    const el = scrollViewNode.getScrollableNode ? scrollViewNode.getScrollableNode() : scrollViewNode;
+
     if (el) {
       const onWheel = (e) => {
         // Only handle vertical wheel events (ignore horizontal trackpad gestures)
@@ -34,7 +42,5 @@ export function useHorizontalScroll() {
       el.addEventListener('wheel', onWheel, { passive: false });
       return () => el.removeEventListener('wheel', onWheel);
     }
-  }, []);
-
-  return elRef;
+  }, [scrollViewRef]);
 }
