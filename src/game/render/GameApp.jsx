@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Dimensions, TouchableOpacity, Text, Animated } from 'react-native';
+import { StyleSheet, View, Dimensions, TouchableOpacity, Text, Animated, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
 import { GameRenderer } from './GameRenderer';
@@ -8,6 +8,7 @@ import { config } from '../../config';
 import { AdminPortal } from '../../admin/AdminPortal';
 import { playSound } from '../../utils/audio';
 import { preloadMessageAudio } from '../../services/audioPlayer';
+import { generateAudioForMessage } from '../../services/wordAudioService';
 
 /**
  * GameApp - Main game component
@@ -41,21 +42,52 @@ export function GameApp() {
   const gameOpacity = useRef(new Animated.Value(1)).current;
   const adminOpacity = useRef(new Animated.Value(0)).current;
 
+  // Audio generation state
+  const [audioGenerating, setAudioGenerating] = useState(false);
+  const [audioGenStatus, setAudioGenStatus] = useState('');
+
   // Initialize physics once on mount
   useEffect(() => {
     // Initialize physics with current dimensions
     gameCore.current = new GameCore(dimensions.width, dimensions.height);
 
-    // Preload audio for current message
+    // Preload audio for current message (with fallback generation)
     const messageText = gameCore.current.message.join(' ');
-    preloadMessageAudio(messageText).then(({ loaded, failed }) => {
-      console.log(`✓ Audio preloaded: ${loaded.length} words`);
-      if (failed.length > 0) {
-        console.warn(`⚠️ Failed to load audio for ${failed.length} word(s):`, failed);
+
+    const loadOrGenerateAudio = async () => {
+      try {
+        // Try to preload existing audio
+        const { loaded, failed } = await preloadMessageAudio(messageText);
+
+        console.log(`✓ Audio preloaded: ${loaded.length} words`);
+
+        // If any words failed to load, generate them
+        if (failed.length > 0) {
+          console.log(`🎤 Generating missing audio for ${failed.length} word(s)...`);
+          setAudioGenerating(true);
+          setAudioGenStatus(`Generating audio for ${failed.length} new word(s)...`);
+
+          const result = await generateAudioForMessage(messageText, (word, current, total) => {
+            setAudioGenStatus(`Generating audio: "${word}" (${current}/${total})`);
+          });
+
+          console.log(`✓ Generated audio for ${result.generated.length} word(s)`);
+
+          // Now preload the newly generated audio
+          const { loaded: newLoaded } = await preloadMessageAudio(messageText);
+          console.log(`✓ Loaded ${newLoaded.length} word audio files`);
+
+          setAudioGenerating(false);
+          setAudioGenStatus('');
+        }
+      } catch (error) {
+        console.error('Failed to load/generate audio:', error);
+        setAudioGenerating(false);
+        setAudioGenStatus('');
       }
-    }).catch(error => {
-      console.error('Failed to preload message audio:', error);
-    });
+    };
+
+    loadOrGenerateAudio();
 
     let animationFrameId;
     let lastTime = performance.now();
@@ -245,6 +277,16 @@ export function GameApp() {
         </Animated.View>
       )}
 
+      {/* Audio generation status indicator */}
+      {audioGenerating && (
+        <View style={styles.audioStatusContainer}>
+          <View style={styles.audioStatusBox}>
+            <ActivityIndicator size="small" color="#ffffff" />
+            <Text style={styles.audioStatusText}>{audioGenStatus}</Text>
+          </View>
+        </View>
+      )}
+
       <StatusBar style="light" />
     </View>
   );
@@ -277,5 +319,26 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  audioStatusContainer: {
+    position: 'absolute',
+    bottom: 40,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 2000,
+  },
+  audioStatusBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderRadius: 8,
+    padding: 12,
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  audioStatusText: {
+    color: '#ffffff',
+    fontSize: 14,
   },
 });
