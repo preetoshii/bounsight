@@ -81,9 +81,16 @@ export const config = {
   // === VISUALS ===
   visuals: {
     backgroundColor: '#0a0a0a',   // Canvas background color (dark mode)
-    wordColor: '#FFFFFF',         // Text color for revealed words (future feature)
+    wordColor: '#FFFFFF',         // Text color for revealed words
     wordFontSize: 32,             // Font size for revealed words in pixels
-    wordFadeMs: 1500,             // How long words stay visible on screen in milliseconds
+
+    // Word fade mode: controls how words fade in/out after bounce
+    wordFadeMode: 'velocity',     // 'velocity' = sync with ball motion, 'static' = time-based fade
+
+    // Static fade timing (only used when wordFadeMode = 'static')
+    wordFadeInMs: 0,              // Fade-in duration: 0% → 100% opacity (0 = instant appearance)
+    wordPersistMs: 800,           // How long word stays at 100% opacity
+    wordFadeOutMs: 1500,          // Fade-out duration: 100% → 0% opacity
   },
 
   // === DRAWING ===
