@@ -94,6 +94,19 @@ export function AdminPortal({ onClose }) {
 
   // Save message (for future dates)
   const saveMessage = async () => {
+    // Validation: Check for empty or invalid data
+    if (!editingDate || editingDate === 'null') {
+      console.error('Cannot save: invalid date', editingDate);
+      alert('Error: Invalid date. Please try again.');
+      return;
+    }
+
+    if (!draftMessage || draftMessage.trim().length === 0) {
+      console.error('Cannot save: empty message');
+      alert('Error: Message cannot be empty.');
+      return;
+    }
+
     try {
       const savedDate = editingDate;
 
@@ -128,6 +141,21 @@ export function AdminPortal({ onClose }) {
 
   // Confirm send now
   const confirmSendNow = async () => {
+    // Validation: Check for empty or invalid data
+    if (!editingDate || editingDate === 'null') {
+      console.error('Cannot send: invalid date', editingDate);
+      alert('Error: Invalid date. Please try again.');
+      setCurrentView('preview'); // Go back to preview
+      return;
+    }
+
+    if (!draftMessage || draftMessage.trim().length === 0) {
+      console.error('Cannot send: empty message');
+      alert('Error: Message cannot be empty.');
+      setCurrentView('preview'); // Go back to preview
+      return;
+    }
+
     try {
       const savedDate = editingDate;
 

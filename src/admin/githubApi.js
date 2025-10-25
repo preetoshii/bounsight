@@ -208,12 +208,32 @@ export async function setCurrentDate(date) {
  * @returns {Promise<Object>} Updated messages data
  */
 export async function saveMessage(date, text, makeCurrent = false) {
+  // Validation: Prevent saving invalid data
+  if (!date || date === 'null' || date === 'undefined') {
+    const error = new Error(`Invalid date: "${date}". Cannot save message.`);
+    console.error(error);
+    throw error;
+  }
+
+  if (!text || typeof text !== 'string' || text.trim().length === 0) {
+    const error = new Error(`Invalid message text: "${text}". Cannot save empty message.`);
+    console.error(error);
+    throw error;
+  }
+
   try {
     // Fetch current data
     const messagesData = await fetchMessages();
 
     // Split text into words
-    const words = text.toLowerCase().split(/\s+/).filter(word => word.length > 0);
+    const words = text.trim().toLowerCase().split(/\s+/).filter(word => word.length > 0);
+
+    // Additional check: ensure we have words after processing
+    if (words.length === 0) {
+      const error = new Error(`Message contains no valid words: "${text}"`);
+      console.error(error);
+      throw error;
+    }
 
     // Update message for the date
     messagesData.messages[date] = { text, words };
