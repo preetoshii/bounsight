@@ -94,7 +94,7 @@ export const config = {
   visuals: {
     backgroundColor: '#0a0a0a',   // Canvas background color (dark mode)
     wordColor: '#FFFFFF',         // Text color for revealed words
-    wordFontSize: 160,            // Font size for revealed words in pixels (5x bigger with custom font)
+    wordFontSize: 145,            // Font size for revealed words in pixels
 
     // Word fade mode: controls how words fade in/out after bounce
     // - 'velocity': Text opacity syncs 1:1 with ball's velocity change (physics-based, organic feel)
