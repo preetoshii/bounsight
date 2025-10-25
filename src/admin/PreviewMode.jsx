@@ -184,11 +184,13 @@ export function PreviewMode({ message, isActive, onSave }) {
         <Text style={styles.previewLabel}>PREVIEW</Text>
 
         {/* Save/Send Now button (bottom-center) */}
-        <Button style={styles.saveButton} onPress={onSave}>
-          <Text style={styles.saveButtonText}>
-            {isActive ? 'Send Now' : 'Save'}
-          </Text>
-        </Button>
+        <View style={styles.saveButtonContainer} pointerEvents="auto">
+          <Button style={styles.saveButton} onPress={onSave}>
+            <Text style={styles.saveButtonText}>
+              {isActive ? 'Send Now' : 'Save'}
+            </Text>
+          </Button>
+        </View>
       </View>
     </View>
   );
@@ -210,11 +212,16 @@ const styles = StyleSheet.create({
     bottom: 0,
     pointerEvents: 'box-none', // Allow touches to pass through to game
   },
-  saveButton: {
+  saveButtonContainer: {
     position: 'absolute',
     bottom: 50,
-    left: '50%',
-    transform: [{ translateX: -100 }], // Center horizontally
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 50,
+  },
+  saveButton: {
     backgroundColor: '#ffffff',
     borderWidth: 2,
     borderColor: '#0a0a0a',
@@ -223,6 +230,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     minWidth: 200,
     maxWidth: 400,
+    width: '100%',
     alignItems: 'center',
   },
   saveButtonText: {

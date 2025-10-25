@@ -401,6 +401,7 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
             styles.previewButtonContainer,
             { transform: [{ translateY: previewButtonTranslateY }] }
           ]}
+          pointerEvents={editingText.trim() ? 'auto' : 'none'} // Prevent clicks when hidden off-screen or disabled
         >
           <Button
             style={[
