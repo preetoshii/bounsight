@@ -123,7 +123,7 @@ function CardItem({
             }
           }}
           disabled={slot.isPast}
-          activeOpacity={0.9}
+          activeOpacity={1}
         >
         {/* Date header */}
         <View style={styles.cardHeader}>
