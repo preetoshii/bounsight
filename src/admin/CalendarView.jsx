@@ -4,6 +4,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withTiming, withSpring, wit
 import { Feather } from '@expo/vector-icons';
 import { playSound } from '../utils/audio';
 import { Pressable } from 'react-native';
+import { useHorizontalScroll } from '../utils/useHorizontalScroll';
 
 /**
  * Individual Card Item with Reanimated animations
@@ -178,6 +179,7 @@ function CardItem({
 export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initialEditingDate, initialEditingText, scrollToDate, onScrollComplete }) {
   const { width, height } = Dimensions.get('window');
   const scrollViewRef = useRef(null);
+  const horizontalScrollRef = useHorizontalScroll(); // Hook for vertical-to-horizontal scroll translation
   const textInputRefs = useRef({}).current;
   const [editingDate, setEditingDate] = useState(initialEditingDate || null);
   const [editingText, setEditingText] = useState(initialEditingText || '');
@@ -343,14 +345,15 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
   return (
     <View style={styles.container}>
       {/* Horizontal scrolling cards */}
-      <TouchableOpacity
-        style={styles.scrollView}
-        activeOpacity={1}
-        onPress={editingDate ? handleBackFromEdit : undefined}
-        disabled={!editingDate}
-        pointerEvents="box-none"
-      >
-        <ScrollView
+      <View ref={horizontalScrollRef} style={{ flex: 1 }}>
+        <TouchableOpacity
+          style={styles.scrollView}
+          activeOpacity={1}
+          onPress={editingDate ? handleBackFromEdit : undefined}
+          disabled={!editingDate}
+          pointerEvents="box-none"
+        >
+          <ScrollView
           ref={scrollViewRef}
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -393,6 +396,7 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
           })}
         </ScrollView>
       </TouchableOpacity>
+      </View>
 
       {/* Preview button - anchored to bottom center of viewport */}
       {editingDate && (
