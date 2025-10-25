@@ -7,7 +7,7 @@ import { config } from '../config';
 /**
  * PreviewMode - Game preview with draft message and overlay controls
  */
-export function PreviewMode({ message, isActive, onBack, onSave }) {
+export function PreviewMode({ message, isActive, onSave }) {
   const [dimensions] = useState(() => {
     const { width, height } = Dimensions.get('window');
     return { width, height };
@@ -166,11 +166,6 @@ export function PreviewMode({ message, isActive, onBack, onSave }) {
 
       {/* Overlay controls */}
       <View style={styles.overlay}>
-        {/* Back button (top-left) */}
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
-          <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
-
         {/* Save/Send Now button (bottom-center) */}
         <TouchableOpacity style={styles.saveButton} onPress={onSave}>
           <Text style={styles.saveButtonText}>
@@ -197,22 +192,6 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     pointerEvents: 'box-none', // Allow touches to pass through to game
-  },
-  backButton: {
-    position: 'absolute',
-    top: 50,
-    left: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  backButtonText: {
-    fontSize: 28,
-    color: '#ffffff',
-    fontWeight: '300',
   },
   saveButton: {
     position: 'absolute',

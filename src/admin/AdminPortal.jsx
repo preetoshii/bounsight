@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
+import { View, StyleSheet, Animated, TouchableOpacity } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { CalendarView } from './CalendarView';
 import { PreviewMode } from './PreviewMode';
 import { Confirmation } from './Confirmation';
@@ -151,14 +152,36 @@ export function AdminPortal({ onClose }) {
     return editingDate === today;
   };
 
+  // Handle back button based on current view
+  const handleBack = () => {
+    if (currentView === 'confirmation') {
+      setCurrentView('preview');
+    } else if (currentView === 'preview') {
+      backToCalendar();
+    } else if (currentView === 'calendar' && editingDate) {
+      // If in calendar editing mode, exit edit mode
+      setEditingDate(null);
+      setDraftMessage('');
+    } else {
+      // Close admin portal
+      onClose();
+    }
+  };
+
   return (
     <View style={styles.container}>
+      {/* Single persistent back button */}
+      <TouchableOpacity
+        onPress={handleBack}
+        style={styles.backButton}
+      >
+        <Feather name="arrow-left" size={28} color="#ffffff" />
+      </TouchableOpacity>
       {/* Calendar View - always rendered for smooth transitions */}
       <Animated.View style={[styles.fullScreen, { opacity: calendarOpacity, pointerEvents: currentView === 'calendar' ? 'auto' : 'none' }]}>
         <CalendarView
           scheduledMessages={scheduledMessages}
           onSelectDate={openPreview}
-          onClose={onClose}
           initialEditingDate={editingDate}
           initialEditingText={draftMessage}
           scrollToDate={scrollToDate}
@@ -171,7 +194,6 @@ export function AdminPortal({ onClose }) {
         <PreviewMode
           message={draftMessage}
           isActive={isEditingToday()}
-          onBack={backToCalendar}
           onSave={isEditingToday() ? sendNow : saveMessage}
         />
       </Animated.View>
@@ -197,5 +219,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+  },
+  backButton: {
+    position: 'absolute',
+    top: 30,
+    left: 30,
+    padding: 24,
+    zIndex: 9999,
   },
 });

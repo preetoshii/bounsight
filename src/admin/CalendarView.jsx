@@ -25,7 +25,6 @@ function CardItem({
   formatDate,
   cardIndex,
   todayIndex,
-  isExiting,
 }) {
   // Shared values for animations
   const scale = useSharedValue(1);
@@ -49,18 +48,6 @@ function CardItem({
       })
     );
   }, []);
-
-  // Exit animation - all cards drop down together (no stagger)
-  useEffect(() => {
-    if (isExiting) {
-      translateY.value = withSpring(500, {
-        damping: 22,
-        stiffness: 300,
-        mass: 0.8,
-      });
-      opacity.value = withTiming(0, { duration: 200 });
-    }
-  }, [isExiting]);
 
   // Animate when editing state changes
   useEffect(() => {
@@ -184,13 +171,12 @@ function CardItem({
 /**
  * CalendarView - Horizontal scrolling card-based calendar
  */
-export function CalendarView({ scheduledMessages, onSelectDate, onClose, initialEditingDate, initialEditingText, scrollToDate, onScrollComplete }) {
+export function CalendarView({ scheduledMessages, onSelectDate, initialEditingDate, initialEditingText, scrollToDate, onScrollComplete }) {
   const { width, height } = Dimensions.get('window');
   const scrollViewRef = useRef(null);
   const textInputRefs = useRef({}).current;
   const [editingDate, setEditingDate] = useState(initialEditingDate || null);
   const [editingText, setEditingText] = useState(initialEditingText || '');
-  const [isExiting, setIsExiting] = useState(false);
   const previewButtonTranslateY = useRef(new RNAnimated.Value(200)).current; // Start off-screen
 
   // Animate preview button based on whether there's text
@@ -330,13 +316,6 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose, initial
     setEditingText('');
   };
 
-  // Handle close with exit animation
-  const handleClose = () => {
-    setIsExiting(true);
-    // Trigger view transition immediately - cards will exit as view fades
-    onClose();
-  };
-
   // Handle preview button press - just navigate, AdminPortal handles fade
   const handlePreview = () => {
     // Don't call handleBackFromEdit - let AdminPortal handle the transition
@@ -345,14 +324,6 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose, initial
 
   return (
     <View style={styles.container}>
-      {/* Back button - always shown in top left */}
-      <TouchableOpacity
-        onPress={editingDate ? handleBackFromEdit : handleClose}
-        style={styles.backButton}
-      >
-        <Feather name="arrow-left" size={28} color="#ffffff" />
-      </TouchableOpacity>
-
       {/* Horizontal scrolling cards */}
       <TouchableOpacity
         style={styles.scrollView}
@@ -399,7 +370,6 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose, initial
                 formatDate={formatDate}
                 cardIndex={index}
                 todayIndex={todayIndex}
-                isExiting={isExiting}
               />
             );
           })}
@@ -444,13 +414,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '300',
     color: '#ffffff',
-    zIndex: 100,
-  },
-  backButton: {
-    position: 'absolute',
-    top: 50,
-    left: 50,
-    padding: 8,
     zIndex: 100,
   },
   scrollView: {
