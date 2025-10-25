@@ -13,6 +13,7 @@ function CardItem({
   isOtherCardEditing,
   cardSize,
   editCardSize,
+  cardSpacing,
   editingText,
   setEditingText,
   textInputRefs,
@@ -78,10 +79,12 @@ function CardItem({
       { translateY: translateY.value }
     ],
     opacity: opacity.value,
+    width: cardSize + cardSpacing, // Include spacing for snapToInterval
+    scrollSnapAlign: 'center', // CSS scroll snap for web
   }));
 
   return (
-    <Animated.View style={animatedStyle}>
+    <Animated.View style={[animatedStyle, { alignItems: 'center' }]}>
       <TouchableOpacity
         style={[
           styles.card,
@@ -217,13 +220,16 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose }) {
   const snapInterval = cardSize + cardSpacing;
   const editCardSize = Math.min(width * 0.9, height * 0.75);
 
-  // Scroll to today's card on mount
+  // Calculate initial scroll position to today's card
+  const initialScrollX = todayIndex !== -1 ? todayIndex * snapInterval : 0;
+
+  // Scroll to today's card immediately on mount
   useEffect(() => {
     if (scrollViewRef.current && todayIndex !== -1) {
-      setTimeout(() => {
-        const scrollX = todayIndex * snapInterval;
-        scrollViewRef.current?.scrollTo({ x: scrollX, animated: false });
-      }, 100);
+      // Use requestAnimationFrame to ensure DOM is ready, but no visible delay
+      requestAnimationFrame(() => {
+        scrollViewRef.current?.scrollTo({ x: initialScrollX, animated: false });
+      });
     }
   }, []);
 
@@ -275,11 +281,6 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose }) {
         </TouchableOpacity>
       )}
 
-      {/* Title (absolute positioned) */}
-      {!editingDate && (
-        <Text style={styles.headerTitle}>Messages</Text>
-      )}
-
       {/* Close button (absolute positioned) */}
       {!editingDate && (
         <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
@@ -299,6 +300,9 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose }) {
           horizontal
           showsHorizontalScrollIndicator={false}
           scrollEnabled={!editingDate}
+          snapToInterval={snapInterval}
+          decelerationRate="fast"
+          snapToAlignment="center"
           style={styles.scrollView}
           contentContainerStyle={[styles.scrollContent, { paddingLeft: (width - cardSize) / 2, paddingRight: (width - cardSize) / 2 }]}
         >
@@ -318,6 +322,7 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose }) {
                 isOtherCardEditing={isOtherCardEditing}
                 cardSize={cardSize}
                 editCardSize={editCardSize}
+                cardSpacing={cardSpacing}
                 editingText={editingText}
                 setEditingText={setEditingText}
                 textInputRefs={textInputRefs}
@@ -375,6 +380,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    scrollSnapType: 'x mandatory', // CSS scroll snap for web
   },
   scrollContent: {
     alignItems: 'center',
@@ -386,7 +392,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#ffffff',
     padding: 32,
-    marginRight: 64,
     justifyContent: 'space-between',
   },
   cardPast: {
