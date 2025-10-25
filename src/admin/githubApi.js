@@ -5,7 +5,7 @@
 
 // GitHub configuration
 const GITHUB_CONFIG = {
-  owner: 'preetoshi', // GitHub username (UPDATE THIS if different)
+  owner: 'preetoshii', // GitHub username
   repo: 'bounsight',
   branch: 'master',
   filePath: 'messages.json',
