@@ -15,22 +15,30 @@ export const config = {
       radius: 30,
       restitution: 0.6,      // Bounciness (0-1)
       friction: 0.01,         // Surface friction
-      frictionAir: 0.02,      // Air resistance (0.01 = slippery, 0.05 = dampened)
+      frictionAir: 0.005,     // Air resistance (lower = less terminal velocity effect)
       mass: 1,
     },
 
     // Velocity limits (safety valve)
-    maxVelocityX: 20,
-    maxVelocityY: 30,
+    maxVelocityX: 30,
+    maxVelocityY: 50,
   },
 
   // === GELATO (SPRINGBOARDS) ===
   gelato: {
     maxLength: 150,           // Maximum distance between start and end points
     thickness: 4,             // Visual thickness of the line
-    springBoost: 0.05,        // Additional impulse force on bounce (added to restitution)
+    springBoost: 2.5,         // Bounce multiplier (1.0 = normal bounce, 2.5 = balanced trampoline)
     maxActiveGelatos: 1,      // How many can exist at once
     color: '#FFFFFF',
+
+    // Visual deformation (trampoline effect)
+    deformation: {
+      maxBendAmount: 20,      // Maximum bend in pixels (higher = more dramatic)
+      duration: 400,          // Total animation duration in ms
+      oscillations: 2,        // Number of spring-back oscillations (0 = no springiness, 2 = rubber band)
+      damping: 0.6,           // How much each oscillation reduces (0-1, higher = more damping)
+    },
   },
 
   // === BOUNCING ===

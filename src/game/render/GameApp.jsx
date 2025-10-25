@@ -19,6 +19,7 @@ export function GameApp() {
   // Mascot position from physics
   const mascotPos = useRef({ x: width / 2, y: 100 });
   const obstacles = useRef([]);
+  const bounceImpact = useRef(null); // Bounce impact data for visual deformation
 
   // Simple line drawing state
   const [lines, setLines] = useState([]);
@@ -44,6 +45,7 @@ export function GameApp() {
       // Get updated positions from physics
       mascotPos.current = gameCore.current.getMascotPosition();
       obstacles.current = gameCore.current.getObstacles();
+      bounceImpact.current = gameCore.current.getBounceImpact();
 
       // Force re-render
       forceUpdate(n => n + 1);
@@ -146,6 +148,7 @@ export function GameApp() {
         obstacles={obstacles.current}
         lines={lines}
         currentPath={currentPath}
+        bounceImpact={bounceImpact.current}
       />
       <StatusBar style="light" />
     </View>
