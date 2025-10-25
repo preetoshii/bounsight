@@ -139,20 +139,19 @@ export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], 
     }
   }
 
-  // Calculate word vertical offset based on ball velocity
-  // Word starts high (-60px) and falls down with the ball as velocity increases
-  const startOffset = -60; // Start position (negative = up)
-  const maxDownwardOffset = 40; // How far it can fall from start
-  const maxVelocity = 15; // approximate max velocity for mapping
-
+  // Calculate word vertical offset - DIRECT 1:1 mapping with velocity
+  // Negative velocity (up) = negative offset (up), positive velocity (down) = positive offset (down)
   let wordVerticalOffset = 0;
-  if (currentWord && mascotVelocityY > 0) {
-    // Ball is falling (positive velocity), move word down from start position
-    const fallProgress = Math.min(1, mascotVelocityY / maxVelocity);
-    wordVerticalOffset = startOffset + (fallProgress * maxDownwardOffset);
-  } else if (currentWord) {
-    // Ball is rising or at peak, keep word at start position (high up)
-    wordVerticalOffset = startOffset;
+  if (currentWord && currentWord.initialVelocityY !== undefined) {
+    const maxOffset = 50; // Maximum offset in either direction
+    const velocityRange = Math.abs(currentWord.initialVelocityY);
+
+    // Direct analog mapping: velocity -20 to +20 maps to offset -50 to +50
+    // Velocity negative (up) → offset negative (up), velocity positive (down) → offset positive (down)
+    const normalizedVelocity = Math.max(-1, Math.min(1, mascotVelocityY / velocityRange));
+    wordVerticalOffset = normalizedVelocity * maxOffset;
+
+    console.log('Velocity:', mascotVelocityY.toFixed(2), '→ Offset:', wordVerticalOffset.toFixed(2));
   }
 
   return (
@@ -384,7 +383,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   word: {
-    fontFamily: 'ADayWithoutSun',
+    fontFamily: 'FinlandRounded',
     fontSize: config.visuals.wordFontSize,
     color: config.visuals.wordColor,
     letterSpacing: 1,

@@ -20,7 +20,7 @@ export default function App() {
 
   // Load custom font
   const [fontsLoaded] = useFonts({
-    'ADayWithoutSun': require('./src/A-day-without-sun-trial.otf'),
+    'FinlandRounded': require('./assets/fonts/FinlandRounded-Thin.otf'),
   });
 
   useEffect(() => {
