@@ -124,23 +124,6 @@ function CardItem({
               handleCardPress(slot.date, message?.text || '', isEditable, cardIndex);
             }
           }}
-          onPressIn={() => {
-            if (!slot.isPast && !isEditing) {
-              // Spring animation on press down
-              scale.value = withSpring(1.1, {
-                damping: 15,
-                stiffness: 200,
-              });
-            }
-          }}
-          onPressOut={() => {
-            if (!slot.isPast) {
-              // Smooth ease back on release
-              scale.value = withTiming(1, {
-                duration: 150,
-              });
-            }
-          }}
           disabled={slot.isPast}
           activeOpacity={1}
         >
@@ -351,7 +334,6 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
 
   // Handle preview button press - call onPreview to navigate to preview mode
   const handlePreview = () => {
-    playSound('click');
     playSound('preview');
     // Pass the edited text to parent before navigating to preview
     onSelectDate(editingDate, editingText);
