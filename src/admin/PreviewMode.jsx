@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { GameRenderer } from '../game/render/GameRenderer';
 import { GameCore } from '../game/core/GameCore';
+import { config } from '../config';
 
 /**
  * PreviewMode - Game preview with draft message and overlay controls
@@ -70,6 +71,35 @@ export function PreviewMode({ message, isActive, onBack, onSave }) {
     };
   }, [message, dimensions.width, dimensions.height]);
 
+  // Helper: Calculate total path length
+  const calculatePathLength = (points) => {
+    let length = 0;
+    for (let i = 1; i < points.length; i++) {
+      const dx = points[i].x - points[i - 1].x;
+      const dy = points[i].y - points[i - 1].y;
+      length += Math.sqrt(dx * dx + dy * dy);
+    }
+    return length;
+  };
+
+  // Helper: Trim path from start to maintain max length
+  const trimPathToMaxLength = (points, maxLength) => {
+    let totalLength = calculatePathLength(points);
+    let trimmedPoints = [...points];
+
+    while (totalLength > maxLength && trimmedPoints.length > 2) {
+      // Remove first point
+      const dx = trimmedPoints[1].x - trimmedPoints[0].x;
+      const dy = trimmedPoints[1].y - trimmedPoints[0].y;
+      const segmentLength = Math.sqrt(dx * dx + dy * dy);
+
+      trimmedPoints.shift();
+      totalLength -= segmentLength;
+    }
+
+    return trimmedPoints;
+  };
+
   // Touch handlers for drawing
   const handleTouchStart = (event) => {
     const touch = event.nativeEvent.touches?.[0] || event.nativeEvent;
@@ -79,7 +109,14 @@ export function PreviewMode({ message, isActive, onBack, onSave }) {
   const handleTouchMove = (event) => {
     if (!currentPath) return;
     const touch = event.nativeEvent.touches?.[0] || event.nativeEvent;
-    setCurrentPath([...currentPath, { x: touch.pageX, y: touch.pageY }]);
+
+    // Add current point to path
+    const newPath = [...currentPath, { x: touch.pageX, y: touch.pageY }];
+
+    // Trim path if it exceeds max length (sliding start)
+    const trimmedPath = trimPathToMaxLength(newPath, config.gelato.maxLength);
+
+    setCurrentPath(trimmedPath);
   };
 
   const handleTouchEnd = () => {
