@@ -118,7 +118,7 @@ export function AdminPortal({ onClose }) {
     }
 
     // Fade back to calendar
-    backToCalendar();
+    backFromPreview();
   };
 
   // Send now (for active message)
@@ -151,8 +151,8 @@ export function AdminPortal({ onClose }) {
       return; // Don't navigate away on error
     }
 
-    // Fade back to calendar
-    backToCalendar();
+    // Close admin portal and return to game
+    onClose();
   };
 
   // Check if editing today's message
