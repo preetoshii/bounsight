@@ -3,6 +3,7 @@ import { StyleSheet, View, Dimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { GameRenderer } from './GameRenderer';
 import { GameCore } from '../core/GameCore';
+import { config } from '../../config';
 
 const { width, height } = Dimensions.get('window');
 
@@ -21,7 +22,7 @@ export function GameApp() {
 
   // Simple line drawing state
   const [lines, setLines] = useState([]);
-  const [currentLine, setCurrentLine] = useState(null);
+  const [currentPath, setCurrentPath] = useState(null); // Array of {x, y} points
 
   useEffect(() => {
     // Initialize physics
@@ -34,8 +35,11 @@ export function GameApp() {
       const deltaTime = currentTime - lastTime;
       lastTime = currentTime;
 
+      // Cap delta time to 16.667ms (60fps) to avoid Matter.js warnings
+      const cappedDelta = Math.min(deltaTime, 16.667);
+
       // Update physics simulation
-      gameCore.current.step(deltaTime);
+      gameCore.current.step(cappedDelta);
 
       // Get updated positions from physics
       mascotPos.current = gameCore.current.getMascotPosition();
@@ -56,35 +60,65 @@ export function GameApp() {
     };
   }, []);
 
+  // Helper: Calculate total path length
+  const calculatePathLength = (points) => {
+    let length = 0;
+    for (let i = 1; i < points.length; i++) {
+      const dx = points[i].x - points[i - 1].x;
+      const dy = points[i].y - points[i - 1].y;
+      length += Math.sqrt(dx * dx + dy * dy);
+    }
+    return length;
+  };
+
+  // Helper: Trim path from start to maintain max length
+  const trimPathToMaxLength = (points, maxLength) => {
+    let totalLength = calculatePathLength(points);
+    let trimmedPoints = [...points];
+
+    while (totalLength > maxLength && trimmedPoints.length > 2) {
+      // Remove first point
+      const dx = trimmedPoints[1].x - trimmedPoints[0].x;
+      const dy = trimmedPoints[1].y - trimmedPoints[0].y;
+      const segmentLength = Math.sqrt(dx * dx + dy * dy);
+
+      trimmedPoints.shift();
+      totalLength -= segmentLength;
+    }
+
+    return trimmedPoints;
+  };
+
   // Touch handlers for drawing lines
   const handleTouchStart = (event) => {
     const touch = event.nativeEvent.touches?.[0] || event.nativeEvent;
-    setCurrentLine({
-      startX: touch.pageX,
-      startY: touch.pageY,
-      endX: touch.pageX,
-      endY: touch.pageY,
-    });
+    setCurrentPath([{ x: touch.pageX, y: touch.pageY }]);
   };
 
   const handleTouchMove = (event) => {
-    if (!currentLine) return;
+    if (!currentPath) return;
     const touch = event.nativeEvent.touches?.[0] || event.nativeEvent;
-    setCurrentLine({
-      ...currentLine,
-      endX: touch.pageX,
-      endY: touch.pageY,
-    });
+
+    // Add current point to path
+    const newPath = [...currentPath, { x: touch.pageX, y: touch.pageY }];
+
+    // Trim path if it exceeds max length (sliding start)
+    const trimmedPath = trimPathToMaxLength(newPath, config.gelato.maxLength);
+
+    setCurrentPath(trimmedPath);
   };
 
   const handleTouchEnd = () => {
-    if (currentLine && gameCore.current) {
-      // Create physics Gelato from the drawn line
+    if (currentPath && currentPath.length >= 2 && gameCore.current) {
+      // Create straight-line Gelato from first to last point of path
+      const startPoint = currentPath[0];
+      const endPoint = currentPath[currentPath.length - 1];
+
       const gelatoLine = gameCore.current.createGelato(
-        currentLine.startX,
-        currentLine.startY,
-        currentLine.endX,
-        currentLine.endY
+        startPoint.x,
+        startPoint.y,
+        endPoint.x,
+        endPoint.y
       );
 
       // Store the clamped line for visual rendering
@@ -92,7 +126,7 @@ export function GameApp() {
         setLines([gelatoLine]); // Replace old lines (only one Gelato at a time)
       }
 
-      setCurrentLine(null);
+      setCurrentPath(null);
     }
   };
 
@@ -111,7 +145,7 @@ export function GameApp() {
         mascotY={mascotPos.current.y}
         obstacles={obstacles.current}
         lines={lines}
-        currentLine={currentLine}
+        currentPath={currentPath}
       />
       <StatusBar style="light" />
     </View>

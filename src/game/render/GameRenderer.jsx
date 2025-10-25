@@ -1,12 +1,12 @@
 import React from 'react';
-import { Canvas, Circle, Fill, Line, Rect, vec, DashPathEffect } from '@shopify/react-native-skia';
+import { Canvas, Circle, Fill, Line, Rect, vec, DashPathEffect, Path, Skia } from '@shopify/react-native-skia';
 import { config } from '../../config';
 
 /**
  * GameRenderer - Unified Skia renderer for all platforms
  * This same code works on Web, iOS, and Android
  */
-export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], lines = [], currentLine = null }) {
+export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], lines = [], currentPath = null }) {
   return (
     <Canvas style={{ width, height }}>
       {/* Background */}
@@ -36,18 +36,25 @@ export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], 
         />
       ))}
 
-      {/* Draw current line being drawn (dotted preview) */}
-      {currentLine && (
-        <Line
-          p1={vec(currentLine.startX, currentLine.startY)}
-          p2={vec(currentLine.endX, currentLine.endY)}
-          color="rgba(255, 255, 255, 0.6)"
-          style="stroke"
-          strokeWidth={config.gelato.thickness}
-        >
-          <DashPathEffect intervals={[10, 10]} />
-        </Line>
-      )}
+      {/* Draw current path being drawn (dotted curved preview) */}
+      {currentPath && currentPath.length >= 2 && (() => {
+        const path = Skia.Path.Make();
+        path.moveTo(currentPath[0].x, currentPath[0].y);
+        for (let i = 1; i < currentPath.length; i++) {
+          path.lineTo(currentPath[i].x, currentPath[i].y);
+        }
+        return (
+          <Path
+            path={path}
+            color="rgba(255, 255, 255, 0.6)"
+            style="stroke"
+            strokeWidth={config.gelato.thickness}
+            strokeCap="round"
+          >
+            <DashPathEffect intervals={[1, 15]} />
+          </Path>
+        );
+      })()}
 
       {/* Mascot circle (now physics-based!) */}
       <Circle
