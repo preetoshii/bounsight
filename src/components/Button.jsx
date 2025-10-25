@@ -19,12 +19,13 @@ export function Button({
   children,
   style,
   disabled = false,
-  scaleAmount = 1.05,
+  scaleAmount = 1.4,
   ...otherProps
 }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const handlePressIn = () => {
+    if (disabled) return;
     Animated.spring(scaleAnim, {
       toValue: scaleAmount,
       useNativeDriver: true,
@@ -43,19 +44,19 @@ export function Button({
   };
 
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      disabled={disabled}
-      activeOpacity={1} // Disable default opacity change since we're using scale
-      style={style}
-      {...otherProps}
-    >
-      <Animated.View style={{ transform: [{ scale: scaleAnim }], width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}>
+    <Animated.View style={[style, { transform: [{ scale: scaleAnim }] }]}>
+      <TouchableOpacity
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        disabled={disabled}
+        activeOpacity={1} // Disable default opacity change since we're using scale
+        style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}
+        {...otherProps}
+      >
         {children}
-      </Animated.View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 
