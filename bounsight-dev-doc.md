@@ -214,10 +214,11 @@ The preview mechanics directly impact game feel. Too responsive and it feels twi
 ## 5) Architecture (End-to-End)
 
 ### Overview
-- **Clients (Web, iOS, Android)** fetch the **current message** and word-audio URLs from a single backend.
-- **Admin Web Portal** (simple password login) lets creators post a message.
-- Backend tokenizes, generates **missing word audio** via ElevenLabs, stores audio, and marks the message **publishable**.
-- Clients cache and play audio per bounce.
+- **Clients (Web, iOS, Android)** fetch the **current message** from GitHub repo.
+- **In-app admin** (gestural password) lets creators update the message directly in the game.
+- Message updates via GitHub API; no separate backend needed for MVP.
+- Audio generation (ElevenLabs) deferred to post-MVP; MVP uses text-only messages.
+- Clients cache message for offline play.
 
 ### Suggested stack
 
@@ -238,35 +239,35 @@ The preview mechanics directly impact game feel. Too responsive and it feels twi
 - **Audio: expo-av + WebAudio API**
   - **Why:** Low-latency audio playback for voice clips. Both APIs let us pre-load and trigger sounds instantly on bounce.
 
-- **Backend: Cloudflare Workers + R2**
-  - **Why:** Dead simple. No database needed—just JSON files and audio storage. Global CDN built-in. Workers for the admin API, R2 for storing word audio files. Scales automatically, costs almost nothing at our scale.
+- **Message Storage: GitHub Repo**
+  - **Why:** Zero setup, free hosting for `current-message.json`. Built-in version control. GitHub API allows in-app updates via token. Global CDN for fast fetches. Eliminates need for separate backend infrastructure in MVP.
 
-- **TTS: ElevenLabs API**
-  - **Why:** Best voice quality and customization. Generate once per word, cache forever. Cost-effective since we only generate new words.
+- **TTS: ElevenLabs API (post-MVP)**
+  - **Why:** Best voice quality and customization. Generate once per word, cache forever. Cost-effective since we only generate new words. Deferred until core gameplay and message system proven.
 
 ### Data model (minimal)
-- **Current message:** Single `current-message.json` file containing:
+- **Current message:** Single `current-message.json` file in GitHub repo containing:
   - Original message text (with punctuation preserved)
   - Tokenized word array (for consistency across clients)
-  - Metadata (updatedAt, voiceId if needed)
-- **Audio files:** Stored in R2/CDN as `audio/{word}.mp3`
-- **System sounds:** Pre-recorded interjection sounds (`audio/system/hm.mp3`, `audio/system/ah.mp3`, etc.)
+  - Metadata (updatedAt)
+- **Audio files:** Deferred to post-MVP
 - No database, no relations, no complex state management
-- **Why this simplicity:** We're not storing user data or message history. Just one current message that all clients fetch. This eliminates entire categories of bugs and complexity.
+- **Why this simplicity:** We're not storing user data or message history. Just one current message that all clients fetch. Git provides version history for free.
 
-### Admin portal (simple UX)
-- Single-page form: textarea for message, hit submit.
-- Backend automatically generates any missing word audio via ElevenLabs.
-- Simple password protection for MVP.
-- One endpoint for clients: `GET /current-message.json` → `{ text, words, audioBaseUrl, updatedAt }`.
+### In-app admin (see Section 9 for details)
+- Hidden gestural password (staircase pattern) unlocks admin UI
+- Simple text area for new message
+- Submit updates `current-message.json` via GitHub API
+- All users get new message on next app launch
 
 ### Message fetch policy (client)
-- Fetch on app start—that's sufficient for daily messages.
-- Cache last message + audio files for offline play.
+- Fetch `current-message.json` from GitHub on app start
+- Cache for offline play
+- No polling or real-time updates needed
 
 ### Build & release
-- One repo; EAS (Expo) for native builds; Vercel/Pages for web + admin.
-- No app update needed for new messages; content pulled at runtime.
+- One repo; EAS (Expo) for native builds; Vercel/Netlify for web
+- No app update needed for new messages; content pulled at runtime from GitHub
 
 ---
 
@@ -316,12 +317,13 @@ The preview mechanics directly impact game feel. Too responsive and it feels twi
 - Height counter as you climb
 - **Game is now playable without audio**
 
-**Milestone 4 – Admin Portal**
-- Simple web form for message input
-- Cloudflare Worker + R2 setup
-- Store/retrieve current-message.json
-- Client fetches message on app launch
-- Test message updates without redeploy
+**Milestone 4 – In-App Admin**
+- Track bounce data (Y position + Gelato width) in GameCore
+- Implement staircase pattern validation (5 ascending + narrowing)
+- Create admin UI overlay (hidden until pattern executed)
+- GitHub API integration for updating current-message.json
+- Client fetches message from GitHub on app launch
+- Test message updates without app redeploy
 
 **Milestone 5 – The Voice**
 - ElevenLabs API integration
@@ -341,32 +343,22 @@ The preview mechanics directly impact game feel. Too responsive and it feels twi
 
 ## 7) Key Modules & Pseudocode
 
-### File layout (proposed)
+### File layout (actual)
 ```
-/apps
-  /bounsight-app
-    /src
-      config.js               # All tunable constants at root for easy access
-      game/
-        core/GameCore.js      # physics, state, step(dt), events
-        core/tokenize.js      # normalization rules
-        input/Gestures.js     # swipe→segment, clamps, lifetime
-        render/GameRenderer.jsx # Skia renderer for all platforms
-        audio/VoiceQueue.js   # preload & sequential playback
-        haptics/index.js      # expo-haptics + web fallback
-      App.jsx
-  /bounsight-admin
-    (Next.js or Vite React SPA)
-    pages/index.jsx           # login + form
-    /api                      # serverless handlers
-
-/packages
-  /backend (Cloudflare Worker or Next API)
-    routes/
-      POST /admin/messages
-      GET  /current-message.json
-    lib/tts-elevenlabs.js
-    lib/storage.js
+/bounsight (single repo)
+  /src
+    config.js                     # All tunable constants
+    game/
+      core/GameCore.js            # physics, state, step(dt), events, staircase validation
+      render/GameRenderer.jsx     # Skia renderer for all platforms
+      render/GameApp.jsx          # Main game component
+      haptics/index.js            # expo-haptics + web fallback
+    admin/
+      AdminOverlay.jsx            # Hidden admin UI (unlocked by staircase)
+      githubApi.js                # GitHub API integration for message updates
+    App.jsx
+  current-message.json            # Message file (fetched by clients, updated by admins)
+  package.json
 ```
 
 ### GameCore (sketch)
