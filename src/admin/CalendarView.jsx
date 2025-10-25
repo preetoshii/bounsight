@@ -22,6 +22,7 @@ function CardItem({
   onSelectDate,
   formatDate,
   cardIndex,
+  todayIndex,
   isExiting,
 }) {
   // Shared values for animations
@@ -29,9 +30,12 @@ function CardItem({
   const opacity = useSharedValue(1); // Start visible so we see them rise
   const translateY = useSharedValue(500); // Start below screen
 
-  // Entrance animation - cards fly up from bottom one by one (balanced spring)
+  // Calculate delay relative to today's card (so today starts immediately)
+  const relativeIndex = cardIndex - todayIndex;
+  const delay = Math.abs(relativeIndex) * 20; // Stagger outward from today
+
+  // Entrance animation - cards fly up from bottom
   useEffect(() => {
-    const delay = cardIndex * 20; // Stagger each card by 20ms (faster)
     translateY.value = withDelay(
       delay,
       withSpring(0, {
@@ -40,23 +44,19 @@ function CardItem({
         mass: 0.8,        // Slight weight
       })
     );
-  }, [cardIndex]);
+  }, []);
 
-  // Exit animation - cards drop down one by one
+  // Exit animation - all cards drop down together (no stagger)
   useEffect(() => {
     if (isExiting) {
-      const delay = cardIndex * 15; // Stagger exit (faster)
-      translateY.value = withDelay(
-        delay,
-        withSpring(500, {
-          damping: 22,
-          stiffness: 300,
-          mass: 0.8,
-        })
-      );
-      opacity.value = withDelay(delay, withTiming(0, { duration: 200 }));
+      translateY.value = withSpring(500, {
+        damping: 22,
+        stiffness: 300,
+        mass: 0.8,
+      });
+      opacity.value = withTiming(0, { duration: 200 });
     }
-  }, [isExiting, cardIndex]);
+  }, [isExiting]);
 
   // Animate when editing state changes
   useEffect(() => {
@@ -331,6 +331,7 @@ export function CalendarView({ scheduledMessages, onSelectDate, onClose }) {
                 onSelectDate={onSelectDate}
                 formatDate={formatDate}
                 cardIndex={index}
+                todayIndex={todayIndex}
                 isExiting={isExiting}
               />
             );

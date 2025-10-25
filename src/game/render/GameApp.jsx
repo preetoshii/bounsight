@@ -178,15 +178,15 @@ export function GameApp() {
   const openAdmin = () => {
     setShowAdmin(true);
     Animated.parallel([
-      Animated.timing(gameOpacity, { toValue: 0, duration: 400, useNativeDriver: true }),
-      Animated.timing(adminOpacity, { toValue: 1, duration: 400, useNativeDriver: true })
+      Animated.timing(gameOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
+      Animated.timing(adminOpacity, { toValue: 1, duration: 200, useNativeDriver: true })
     ]).start();
   };
 
   const closeAdmin = () => {
     Animated.parallel([
-      Animated.timing(adminOpacity, { toValue: 0, duration: 400, useNativeDriver: true }),
-      Animated.timing(gameOpacity, { toValue: 1, duration: 400, useNativeDriver: true })
+      Animated.timing(adminOpacity, { toValue: 0, duration: 200, useNativeDriver: true }),
+      Animated.timing(gameOpacity, { toValue: 1, duration: 200, useNativeDriver: true })
     ]).start(() => {
       setShowAdmin(false);
     });
@@ -217,11 +217,11 @@ export function GameApp() {
         />
 
         {/* Admin Button - Feather Icon */}
-        {!showAdmin && (
-          <TouchableOpacity style={styles.adminButton} onPress={openAdmin}>
+        <Animated.View style={[styles.adminButton, { opacity: gameOpacity }]}>
+          <TouchableOpacity onPress={openAdmin} style={styles.adminButtonTouchable}>
             <Feather name="feather" size={20} color="#ffffff" style={{ opacity: 0.6 }} />
           </TouchableOpacity>
-        )}
+        </Animated.View>
       </Animated.View>
 
       {/* Admin portal with fade animation */}
@@ -251,13 +251,17 @@ const styles = StyleSheet.create({
   adminButton: {
     position: 'absolute',
     top: 50,
-    right: 20,
+    right: 50,
     width: 44,
     height: 44,
     borderRadius: 22,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    zIndex: 1000,
+  },
+  adminButtonTouchable: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1000,
   },
 });
