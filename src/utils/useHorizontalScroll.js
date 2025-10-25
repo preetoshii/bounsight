@@ -39,8 +39,8 @@ export function useHorizontalScroll(scrollViewRef) {
           e.preventDefault();
           // Translate vertical wheel movement to horizontal scroll
           // Use instant scrolling (no 'smooth') to work better with snap points
-          // Reduce sensitivity by dividing deltaY
-          el.scrollBy(e.deltaY * 0.5, 0);
+          // Much lower sensitivity for gradual card-by-card scrolling
+          el.scrollBy(e.deltaY * 0.1, 0);
         }
       };
 
