@@ -56,6 +56,10 @@ export function GameApp() {
   // Animation frame ref (needs to be accessible to pause/resume)
   const animationFrameId = useRef(null);
 
+  // Fixed timestep accumulator for framerate-independent physics
+  const accumulator = useRef(0);
+  const FIXED_TIMESTEP = 16.667; // 60 Hz physics updates (1000ms / 60 = 16.667ms)
+
   // Initialize physics once on mount
   useEffect(() => {
     // Initialize physics with current dimensions
@@ -118,13 +122,23 @@ export function GameApp() {
       const deltaTime = currentTime - lastTime;
       lastTime = currentTime;
 
-      // Cap delta time to 16.667ms (60fps) to avoid Matter.js warnings
-      const cappedDelta = Math.min(deltaTime, 16.667);
+      // Cap frame delta to prevent spiral of death (max 100ms if tab goes to background)
+      const frameDelta = Math.min(deltaTime, 100);
 
-      // Update physics simulation
-      gameCore.current.step(cappedDelta);
+      // Add frame time to accumulator
+      accumulator.current += frameDelta;
 
-      // Get updated positions from physics
+      // Run physics updates in fixed 16.667ms timesteps
+      // This decouples physics from rendering framerate
+      // At 120 FPS: Run 1 physics step every 2 frames
+      // At 60 FPS: Run 1 physics step every frame
+      // At 30 FPS: Run 2 physics steps per frame
+      while (accumulator.current >= FIXED_TIMESTEP) {
+        gameCore.current.step(FIXED_TIMESTEP);
+        accumulator.current -= FIXED_TIMESTEP;
+      }
+
+      // Get updated positions from physics (render at display refresh rate)
       mascotPos.current = gameCore.current.getMascotPosition();
       obstacles.current = gameCore.current.getObstacles();
       bounceImpact.current = gameCore.current.getBounceImpact();
@@ -140,7 +154,7 @@ export function GameApp() {
         setLines(currentGelatoData ? [currentGelatoData] : []);
       }
 
-      // Force re-render
+      // Force re-render (at display refresh rate for smooth visuals)
       forceUpdate(n => n + 1);
 
       // Continue animation loop
@@ -167,6 +181,8 @@ export function GameApp() {
         cancelAnimationFrame(animationFrameId.current);
         animationFrameId.current = null;
       }
+      // Reset accumulator to prevent time buildup while paused
+      accumulator.current = 0;
     } else {
       // Resume animation loop when admin closes (if not already running)
       if (!animationFrameId.current && gameCore.current) {
@@ -176,8 +192,13 @@ export function GameApp() {
           const deltaTime = currentTime - lastTime;
           lastTime = currentTime;
 
-          const cappedDelta = Math.min(deltaTime, 16.667);
-          gameCore.current.step(cappedDelta);
+          const frameDelta = Math.min(deltaTime, 100);
+          accumulator.current += frameDelta;
+
+          while (accumulator.current >= FIXED_TIMESTEP) {
+            gameCore.current.step(FIXED_TIMESTEP);
+            accumulator.current -= FIXED_TIMESTEP;
+          }
 
           mascotPos.current = gameCore.current.getMascotPosition();
           obstacles.current = gameCore.current.getObstacles();
