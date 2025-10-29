@@ -1,7 +1,6 @@
 import Matter from 'matter-js';
 import { config } from '../../config';
 import { playSound } from '../../utils/audio';
-import { playWordAudio } from '../../services/audioPlayer';
 
 /**
  * GameCore - Physics engine using Matter.js
@@ -465,11 +464,6 @@ export class GameCore {
       timestamp: Date.now(),
       initialVelocityY: mascotBody.velocity.y, // Store Y velocity at bounce
     };
-
-    // Play word audio (don't await - fire and forget)
-    playWordAudio(word).catch(error => {
-      console.warn(`Failed to play word audio for "${word}":`, error);
-    });
 
     // Advance to next word (loop)
     this.wordIndex = (this.wordIndex + 1) % this.message.length;

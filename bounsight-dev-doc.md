@@ -135,20 +135,19 @@ The preview mechanics directly impact game feel. Too responsive and it feels twi
 - Lowercase for audio reuse cache (preserve case where we want stylistic capitalization in metadata).
 - **Message storage:** Store original message with punctuation in `current-message.json`. Strip punctuation only for display and audio lookup at runtime.
 - Contractions treated as single words (e.g., "don't").
-- **Punctuation interjections:** Map major stops (period, em-dash, ellipsis) to pre-recorded interjection sounds ("hm", "ah", etc.). These are system sounds generated once and stored alongside word audio. No on-screen glyph for punctuation.
+- **Punctuation interjections:** Map major stops (period, em-dash, ellipsis) to pre-recorded interjection sounds ("hm", "ah", etc.). These are system sounds recorded once and stored with message audio. No on-screen glyph for punctuation.
 
-### Audio generation & caching (ElevenLabs)
-- **Workflow:** On message publish, back end tokenizes → checks each normalized word against an **Audio Dictionary**.
-- **New word:** generate once via ElevenLabs TTS → store as `.wav/.mp3` in object storage (CDN-backed).
-- **Existing word:** reuse stored audio; no re-generation costs.
-- **Voice:** single curated voice ID for MVP (can expand later).
-- **Parameters:** stable speed/pitch; can be configured per message if needed.
+### Audio recording & storage (Recording-first approach)
+- **Workflow:** Admin records the full message phrase in the admin UI using device microphone.
+- **Speech-to-text:** Automatic transcription of recorded audio to generate editable text.
+- **Word segmentation:** Detect start/end timestamps for each word in the recording (stored in audio metadata or separate JSON).
+- **Playback:** Play specific segments of the recorded audio file based on word timestamps when ball bounces.
+- **Storage:** Full message audio stored as single `.wav/.mp3` file in GitHub storage with word boundary metadata.
 
 ### Client playback
-- **Load all word audio on startup**—messages are short enough (20-50 words) that we can just grab everything upfront.
-- Maintain a simple **word audio queue**; each bounce triggers the next word's playback.
-- Web: WebAudio (`AudioBufferSourceNode`).
-- Mobile: `expo-av` for low latency; pre-load `Sound` instances.
+- **Load message audio on startup**—single audio file per message with word boundary data.
+- Maintain a simple **word audio queue**; each bounce triggers playback of the next word segment using stored timestamps.
+- All platforms: `expo-av` for audio playback with seek/segment support.
 
 ### Storage & CDN
 - `word_audio/{locale}/{voice_id}/{hash(word)}.wav`
@@ -217,7 +216,7 @@ The preview mechanics directly impact game feel. Too responsive and it feels twi
 - **Clients (Web, iOS, Android)** fetch the **current message** from GitHub repo.
 - **In-app admin** (gestural password) lets creators update the message directly in the game.
 - Message updates via GitHub API; no separate backend needed for MVP.
-- Audio generation (ElevenLabs) deferred to post-MVP; MVP uses text-only messages.
+- Audio uses recording-first approach: record message → automatic transcription → word segmentation → playback.
 - Clients cache message for offline play.
 
 ### Suggested stack
@@ -242,8 +241,8 @@ The preview mechanics directly impact game feel. Too responsive and it feels twi
 - **Message Storage: GitHub Repo**
   - **Why:** Zero setup, free hosting for `current-message.json`. Built-in version control. GitHub API allows in-app updates via token. Global CDN for fast fetches. Eliminates need for separate backend infrastructure in MVP.
 
-- **TTS: ElevenLabs API (post-MVP)**
-  - **Why:** Best voice quality and customization. Generate once per word, cache forever. Cost-effective since we only generate new words. Deferred until core gameplay and message system proven.
+- **Audio: Recording-first approach**
+  - **Why:** Authentic voice quality from creator recordings. Record once → auto-transcribe → segment words → playback. No AI generation costs. Personal touch from real human voice.
 
 ### Data model (minimal)
 - **Current message:** Single `current-message.json` file in GitHub repo containing:
@@ -326,11 +325,12 @@ The preview mechanics directly impact game feel. Too responsive and it feels twi
 - Test message updates without app redeploy
 
 **Milestone 5 – The Voice**
-- ElevenLabs API integration
-- Generate audio for new words on message publish
-- Store word audio files in R2
-- Client fetches and caches audio files
-- Play word audio on bounce synchronized with text
+- Audio recording UI in admin portal
+- Speech-to-text integration for automatic transcription
+- Word boundary detection and timestamp storage
+- Store message audio files with word metadata in GitHub
+- Client fetches and caches audio with word boundaries
+- Play word segments on bounce synchronized with text
 - **Game is now feature complete**
 
 **Milestone 6 – Ship Ready**

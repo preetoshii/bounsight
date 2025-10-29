@@ -7,8 +7,6 @@ import { GameCore } from '../core/GameCore';
 import { config } from '../../config';
 import { AdminPortal } from '../../admin/AdminPortal';
 import { playSound } from '../../utils/audio';
-import { preloadMessageAudio } from '../../services/audioPlayer';
-import { generateAudioForMessage } from '../../services/wordAudioService';
 import { fetchMessages } from '../../admin/githubApi';
 import { Button } from '../../components/Button';
 
@@ -46,10 +44,6 @@ export function GameApp() {
   const gameOpacity = useRef(new Animated.Value(1)).current;
   const adminOpacity = useRef(new Animated.Value(0)).current;
 
-  // Audio generation state
-  const [audioGenerating, setAudioGenerating] = useState(false);
-  const [audioGenStatus, setAudioGenStatus] = useState('');
-
   // Remount counter - increment to force remount main game
   const [gameMountKey, setGameMountKey] = useState(0);
 
@@ -64,57 +58,6 @@ export function GameApp() {
   useEffect(() => {
     // Initialize physics with current dimensions
     gameCore.current = new GameCore(dimensions.width, dimensions.height);
-
-    // Wait for message to load from GitHub, THEN preload audio
-    const loadOrGenerateAudio = async () => {
-      try {
-        // Wait for message to load from GitHub (if not preview mode)
-        await gameCore.current.messageLoadPromise;
-
-        // NOW get the loaded message text
-        const messageText = gameCore.current.message.join(' ');
-        const words = gameCore.current.message;
-
-        console.log(`🎵 Preloading audio for message: "${messageText}"`);
-
-        // Try to preload existing audio
-        const { loaded, failed } = await preloadMessageAudio(messageText);
-
-        console.log(`✓ Audio preloaded: ${loaded.length} words`);
-
-        // If NO audio loaded and we have words, or if any words failed to load, generate them
-        const needsGeneration = (loaded.length === 0 && words.length > 0) || failed.length > 0;
-
-        if (needsGeneration) {
-          console.log(`🎤 Generating missing audio for message...`);
-          setAudioGenerating(true);
-          setAudioGenStatus(`Checking for new words...`);
-
-          const result = await generateAudioForMessage(messageText, (word, current, total) => {
-            setAudioGenStatus(`Generating audio: "${word}" (${current}/${total})`);
-          });
-
-          if (result.generated.length > 0) {
-            console.log(`✓ Generated audio for ${result.generated.length} word(s)`);
-
-            // Now preload the newly generated audio
-            const { loaded: newLoaded } = await preloadMessageAudio(messageText);
-            console.log(`✓ Loaded ${newLoaded.length} word audio files`);
-          } else {
-            console.log(`✓ All words already have audio`);
-          }
-
-          setAudioGenerating(false);
-          setAudioGenStatus('');
-        }
-      } catch (error) {
-        console.error('Failed to load/generate audio:', error);
-        setAudioGenerating(false);
-        setAudioGenStatus('');
-      }
-    };
-
-    loadOrGenerateAudio();
 
     let lastTime = performance.now();
 
@@ -373,16 +316,6 @@ export function GameApp() {
         </View>
       )}
 
-      {/* Audio generation status indicator */}
-      {audioGenerating && (
-        <View style={styles.audioStatusContainer}>
-          <View style={styles.audioStatusBox}>
-            <ActivityIndicator size="small" color="#ffffff" />
-            <Text style={styles.audioStatusText}>{audioGenStatus}</Text>
-          </View>
-        </View>
-      )}
-
       <StatusBar style="light" />
     </View>
   );
@@ -411,26 +344,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
-  },
-  audioStatusContainer: {
-    position: 'absolute',
-    bottom: 40,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 2000,
-  },
-  audioStatusBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    borderRadius: 8,
-    padding: 12,
-    paddingHorizontal: 20,
-    gap: 12,
-  },
-  audioStatusText: {
-    color: '#ffffff',
-    fontSize: 14,
   },
 });

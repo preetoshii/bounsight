@@ -6,7 +6,6 @@ import { PreviewMode } from './PreviewMode';
 import { Confirmation } from './Confirmation';
 import { fetchMessages, saveMessage as saveMessageToGitHub } from './githubApi';
 import { playSound } from '../utils/audio';
-import { generateAudioForMessage } from '../services/wordAudioService';
 
 /**
  * AdminPortal - Root component for admin interface
@@ -20,7 +19,6 @@ export function AdminPortal({ onClose, preloadedData }) {
   const [scrollToDate, setScrollToDate] = useState(null); // Date to scroll to when returning to calendar
   const [messagesData, setMessagesData] = useState(null); // Full messages.json data (includes _sha for updates)
   const [isLoading, setIsLoading] = useState(!preloadedData); // Loading state (false if data was preloaded)
-  const [audioGenerationStatus, setAudioGenerationStatus] = useState(null); // {status: 'generating'|'complete'|'error', progress: {current, total}, message}
 
   // Load messages on mount (or use preloaded data)
   useEffect(() => {
@@ -59,57 +57,7 @@ export function AdminPortal({ onClose, preloadedData }) {
   };
 
   // Navigate to preview mode from edit mode
-  const openPreview = async () => {
-    // Show generating status
-    setAudioGenerationStatus({
-      status: 'generating',
-      message: 'Checking for new words...',
-    });
-
-    try {
-      // Generate audio for any new words in the message
-      const result = await generateAudioForMessage(
-        draftMessage,
-        (word, current, total) => {
-          setAudioGenerationStatus({
-            status: 'generating',
-            progress: { current, total },
-            message: `Generating audio for "${word}" (${current}/${total})...`,
-          });
-        }
-      );
-
-      const { generated, existing, failed } = result;
-
-      if (failed.length > 0) {
-        console.warn('Some words failed to generate audio:', failed);
-        setAudioGenerationStatus({
-          status: 'error',
-          message: `Failed to generate audio for: ${failed.join(', ')}`,
-        });
-        // Still show preview, but with warning
-        setTimeout(() => setAudioGenerationStatus(null), 3000);
-      } else if (generated.length > 0) {
-        console.log(`✓ Generated audio for ${generated.length} new word(s):`, generated);
-        setAudioGenerationStatus({
-          status: 'complete',
-          message: `Generated audio for ${generated.length} new word(s)!`,
-        });
-        setTimeout(() => setAudioGenerationStatus(null), 2000);
-      } else {
-        console.log('✓ All words already have audio');
-        setAudioGenerationStatus(null);
-      }
-    } catch (error) {
-      console.error('Audio generation failed:', error);
-      setAudioGenerationStatus({
-        status: 'error',
-        message: 'Failed to generate audio. Preview will show text only.',
-      });
-      setTimeout(() => setAudioGenerationStatus(null), 3000);
-    }
-
-    // Navigate to preview
+  const openPreview = () => {
     setCurrentView('preview');
   };
 
@@ -285,26 +233,6 @@ export function AdminPortal({ onClose, preloadedData }) {
           onConfirm={confirmSendNow}
         />
       )}
-
-      {/* Audio generation status overlay */}
-      {audioGenerationStatus && (
-        <View style={styles.audioStatusOverlay}>
-          <View style={[
-            styles.audioStatusBox,
-            audioGenerationStatus.status === 'error' && styles.audioStatusError,
-            audioGenerationStatus.status === 'complete' && styles.audioStatusComplete,
-          ]}>
-            <Text style={styles.audioStatusText}>
-              {audioGenerationStatus.message}
-            </Text>
-            {audioGenerationStatus.progress && (
-              <Text style={styles.audioStatusProgress}>
-                {audioGenerationStatus.progress.current} / {audioGenerationStatus.progress.total}
-              </Text>
-            )}
-          </View>
-        </View>
-      )}
     </View>
   );
 }
@@ -327,43 +255,5 @@ const styles = StyleSheet.create({
     left: 30,
     padding: 24,
     zIndex: 9999,
-  },
-  audioStatusOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    zIndex: 10000,
-  },
-  audioStatusBox: {
-    backgroundColor: '#1a1a1a',
-    borderWidth: 2,
-    borderColor: '#ffffff',
-    borderRadius: 12,
-    padding: 24,
-    minWidth: 300,
-    maxWidth: 500,
-    alignItems: 'center',
-  },
-  audioStatusError: {
-    borderColor: '#ff4444',
-  },
-  audioStatusComplete: {
-    borderColor: '#44ff44',
-  },
-  audioStatusText: {
-    color: '#ffffff',
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  audioStatusProgress: {
-    color: '#888888',
-    fontSize: 14,
-    textAlign: 'center',
   },
 });
