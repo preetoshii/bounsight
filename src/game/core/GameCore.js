@@ -27,6 +27,22 @@ export class GameCore {
     this.wordTimings = wordTimings;
     this.wordAudioSegments = wordAudioSegments; // Pre-sliced audio blobs for each word
     this.currentAudioElement = null; // HTML5 Audio element for current word
+    this.preloadedAudioElements = []; // Preloaded audio elements to reduce latency
+
+    // Preload all audio segments to eliminate loading delay
+    if (wordAudioSegments && wordAudioSegments.length > 0) {
+      console.log('Preloading', wordAudioSegments.length, 'audio segments...');
+      this.preloadedAudioElements = wordAudioSegments.map((segment, index) => {
+        if (segment.blobUri) {
+          const audio = new Audio(segment.blobUri);
+          audio.preload = 'auto';
+          audio.load(); // Force immediate load
+          return audio;
+        }
+        return null;
+      });
+      console.log('Audio preloading initiated');
+    }
 
     // Store target position for entrance animation
     this.mascotTargetY = height * 0.25; // 25% from top = 75% near top
@@ -494,14 +510,30 @@ export class GameCore {
           // Stop any currently playing audio
           if (this.currentAudioElement) {
             this.currentAudioElement.pause();
-            this.currentAudioElement = null;
+            this.currentAudioElement.currentTime = 0;
           }
 
-          // Create new HTML5 Audio element and play
-          this.currentAudioElement = new Audio(segment.blobUri);
-          this.currentAudioElement.play();
+          // Use preloaded audio if available, otherwise create new element
+          const startTime = performance.now();
 
-          console.log(`Playing word "${segment.word}" from pre-sliced audio`);
+          if (this.preloadedAudioElements[this.wordIndex]) {
+            // Use preloaded audio (should be instant)
+            this.currentAudioElement = this.preloadedAudioElements[this.wordIndex];
+            this.currentAudioElement.currentTime = 0; // Reset to start
+            const playPromise = this.currentAudioElement.play();
+
+            playPromise.then(() => {
+              const latency = performance.now() - startTime;
+              console.log(`✓ Word "${segment.word}" playing (${latency.toFixed(1)}ms latency)`);
+            }).catch(err => {
+              console.error('Playback failed:', err);
+            });
+          } else {
+            // Fallback: create new audio element
+            this.currentAudioElement = new Audio(segment.blobUri);
+            this.currentAudioElement.play();
+            console.warn(`⚠ Word "${segment.word}" not preloaded, creating new audio element`);
+          }
         } catch (error) {
           console.error('Failed to play audio segment:', error);
         }
