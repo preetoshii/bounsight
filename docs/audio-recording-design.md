@@ -1382,41 +1382,103 @@ Repository structure:
 
 ---
 
-## 🚀 Implementation Plan
+## 🚀 Implementation Milestones
 
-### Phase 1: Core Recording & Transcription (Week 1)
-1. Install `expo-audio` package
-2. Create `audioRecordingService.js` with expo-audio wrapper
-3. Modify CalendarView card to show recording UI
-4. Implement record/stop functionality
-5. Set up Google Cloud Speech-to-Text API
-6. Create `googleSpeechService.js` for transcription
-7. Display transcribed text in card
+### Milestone 1: "I can record my voice!"
+**Goal:** Basic recording works in admin UI
 
-### Phase 2: Audio Storage & Deployment (Week 1-2)
-1. Create `audioStorageService.js` for GitHub uploads
-2. Implement audio file upload to GitHub
-3. Update messages.json with audioUrl and wordTimings
-4. Test end-to-end: record → transcribe → save → deploy
+- Install `expo-audio` package
+- Create `audioRecordingService.js` wrapper
+- Add Record button to CalendarView cards
+- Implement start/stop recording
+- Show recording duration
+- Save recorded audio file locally
 
-### Phase 3: Playback Integration (Week 2)
-1. Modify GameCore to load audio file from GitHub
-2. Implement word segment playback using wordTimings
-3. Replace old audio playback logic with new system
-4. Test preview mode with recorded audio
+**Success:** Press Record → speak → press Stop → audio file exists
 
-### Phase 4: Testing & Polish (Week 2-3)
-1. Test on web, iOS, Android
-2. Error handling (transcription failures, upload errors)
-3. Loading states and user feedback
-4. Re-record functionality
-5. End-to-end testing
+---
 
-### Phase 5: Cleanup (Week 3)
-1. Remove any remaining references to old audio system
-2. Update documentation
-3. Performance testing
-4. Bug fixes
+### Milestone 2: "It knows what I'm saying!"
+**Goal:** Transcription transforms speech into text
+
+- Set up Google Cloud Speech-to-Text API
+- Create `googleSpeechService.js`
+- Send recorded audio to Google API
+- Receive transcription + word timings back
+- Display transcribed text in UI
+- Handle API errors gracefully
+
+**Success:** Record audio → see transcribed words appear with timestamps
+
+---
+
+### Milestone 3: "The waveform looks alive!"
+**Goal:** Visual feedback during recording
+
+- Create `AudioWaveform` component
+- Show real-time audio levels during recording
+- Display static waveform after recording
+- Add sentence break button UI
+- Track sentence break timestamps
+- Polish recording/review state transitions
+
+**Success:** Recording feels responsive with live waveform + sentence break button works
+
+---
+
+### Milestone 4: "My voice is saved forever!"
+**Goal:** Audio and data stored in GitHub
+
+- Create `audioStorageService.js` for GitHub uploads
+- Generate smart filenames (first-3-words_date.m4a)
+- Upload audio file to GitHub
+- Update messages.json with transcription + wordTimings
+- Insert `"*"` markers for sentence breaks
+- Handle multiple recordings same day (counter suffix)
+
+**Success:** Record → Complete → audio file in GitHub + messages.json updated
+
+---
+
+### Milestone 5: "I can hear myself in the game!"
+**Goal:** Word segments play during gameplay
+
+- Load audio file from GitHub in GameCore
+- Implement millisecond-precision seeking with expo-audio
+- Play correct audio segment for each word
+- Handle sentence break markers (play jingle, skip audio)
+- Sync audio with word reveal animation
+- Test timing accuracy
+
+**Success:** Ball bounces → word appears → my recorded voice plays that exact word
+
+---
+
+### Milestone 6: "The preview feels perfect!"
+**Goal:** Full recording-to-preview flow works seamlessly
+
+- Auto-navigate to preview after transcription
+- Preview mode loads recorded audio
+- Full gameplay experience with voice
+- Redo button to re-record
+- Save button deploys to GitHub
+- Loading states throughout (no jarring modals)
+
+**Success:** Record → auto-preview → hear full message with bouncing ball → save
+
+---
+
+### Milestone 7: "Ship it!"
+**Goal:** Production-ready and polished
+
+- Test on web, iOS, Android
+- Error handling (network, API failures, permissions)
+- Loading indicators and user feedback
+- Edge cases (empty recordings, API timeouts, file conflicts)
+- Performance optimization
+- Final bug fixes and polish
+
+**Success:** Confident it works smoothly across all platforms and scenarios
 
 ---
 
