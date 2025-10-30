@@ -1394,91 +1394,110 @@ Repository structure:
 - Show recording duration
 - Save recorded audio file locally
 
-**Success:** Press Record → speak → press Stop → audio file exists
+**Success:** Press Record → speak → press Stop → local audio file exists
 
 ---
 
-### Milestone 2: "It knows what I'm saying!"
-**Goal:** Transcription transforms speech into text
-
-- Set up Google Cloud Speech-to-Text API
-- Create `googleSpeechService.js`
-- Send recorded audio to Google API
-- Receive transcription + word timings back
-- Display transcribed text in UI
-- Handle API errors gracefully
-
-**Success:** Record audio → see transcribed words appear with timestamps
-
----
-
-### Milestone 3: "The waveform looks alive!"
-**Goal:** Visual feedback during recording
+### Milestone 2: "The waveform looks alive!"
+**Goal:** Visual feedback during recording makes it feel responsive
 
 - Create `AudioWaveform` component
 - Show real-time audio levels during recording
 - Display static waveform after recording
 - Add sentence break button UI
 - Track sentence break timestamps
-- Polish recording/review state transitions
+- Polish recording/review state transitions (Redo/Complete buttons)
 
 **Success:** Recording feels responsive with live waveform + sentence break button works
 
 ---
 
-### Milestone 4: "My voice is saved forever!"
-**Goal:** Audio and data stored in GitHub
+### Milestone 3: "It knows what I'm saying!"
+**Goal:** Transcription transforms speech into text with word timings
+
+- Set up Google Cloud Speech-to-Text API key
+- Create `googleSpeechService.js`
+- Send recorded audio to Google API after pressing Complete
+- Show loading spinner while processing
+- Receive transcription + word timings back
+- Insert `"*"` markers at sentence break timestamps
+- Handle API errors gracefully
+
+**Success:** Press Complete → loading → transcribed words appear with precise timings
+
+**Flow:** Record → Stop → Redo/Complete → **[Loading]** → Get transcription + timings
+
+---
+
+### Milestone 4: "I can hear myself in the game!"
+**Goal:** Preview plays local audio with word segments
+
+- Modify PreviewMode to accept local audio file + wordTimings
+- Auto-navigate to preview after transcription completes
+- Implement millisecond-precision audio seeking with expo-audio
+- Play correct audio segment for each word as ball bounces
+- Handle sentence break markers (play jingle, skip display)
+- Sync audio with word reveal animation
+
+**Success:** Auto-preview opens → ball bounces → my recorded voice plays exact word segments
+
+**Flow:** Transcription complete → **Auto-navigate to Preview** → hear voice in game
+
+---
+
+### Milestone 5: "My voice is saved forever!"
+**Goal:** Audio and data deployed to GitHub from preview
 
 - Create `audioStorageService.js` for GitHub uploads
 - Generate smart filenames (first-3-words_date.m4a)
-- Upload audio file to GitHub
-- Update messages.json with transcription + wordTimings
-- Insert `"*"` markers for sentence breaks
+- Upload audio file to GitHub when Save pressed in preview
+- Update messages.json with transcription + wordTimings + audioUrl
 - Handle multiple recordings same day (counter suffix)
+- Show success confirmation
 
-**Success:** Record → Complete → audio file in GitHub + messages.json updated
+**Success:** In preview → press Save → audio uploaded to GitHub + messages.json updated
 
----
-
-### Milestone 5: "I can hear myself in the game!"
-**Goal:** Word segments play during gameplay
-
-- Load audio file from GitHub in GameCore
-- Implement millisecond-precision seeking with expo-audio
-- Play correct audio segment for each word
-- Handle sentence break markers (play jingle, skip audio)
-- Sync audio with word reveal animation
-- Test timing accuracy
-
-**Success:** Ball bounces → word appears → my recorded voice plays that exact word
+**Flow:** Preview satisfied → **Press Save** → upload to GitHub → return to calendar
 
 ---
 
-### Milestone 6: "The preview feels perfect!"
-**Goal:** Full recording-to-preview flow works seamlessly
+### Milestone 6: "It works from GitHub too!"
+**Goal:** Verify production path loads audio from GitHub
 
-- Auto-navigate to preview after transcription
-- Preview mode loads recorded audio
-- Full gameplay experience with voice
-- Redo button to re-record
-- Save button deploys to GitHub
-- Loading states throughout (no jarring modals)
+- Modify GameCore to load audio from GitHub URL (not local file)
+- Test fetching audio from GitHub raw URL
+- Verify word segment playback works with remote audio
+- Test on fresh app launch (cold start)
+- Ensure timing accuracy with network audio
 
-**Success:** Record → auto-preview → hear full message with bouncing ball → save
+**Success:** Launch game → ball bounces → plays voice from GitHub URL correctly
+
+**Flow:** Game launch → fetch message from GitHub → load audio URL → play segments
 
 ---
 
 ### Milestone 7: "Ship it!"
-**Goal:** Production-ready and polished
+**Goal:** Production-ready and polished across all platforms
 
-- Test on web, iOS, Android
-- Error handling (network, API failures, permissions)
-- Loading indicators and user feedback
-- Edge cases (empty recordings, API timeouts, file conflicts)
-- Performance optimization
-- Final bug fixes and polish
+- Test full flow on web, iOS, Android
+- Error handling (network failures, API errors, permissions denied)
+- Loading indicators and user feedback throughout
+- Edge cases (empty recordings, API timeouts, file conflicts, re-recording)
+- Performance optimization (audio loading, seeking accuracy)
+- Cross-platform testing and bug fixes
 
 **Success:** Confident it works smoothly across all platforms and scenarios
+
+---
+
+**Milestone Dependencies:**
+1. Record (local file)
+2. UI polish (waveform, buttons)
+3. Transcription (needs local file from #1) → **Loading state**
+4. Preview (needs local file + timings from #3) → **Auto-navigation**
+5. Save to GitHub (triggered from preview in #4) → **Upload**
+6. Load from GitHub (production verification)
+7. Polish and ship
 
 ---
 
