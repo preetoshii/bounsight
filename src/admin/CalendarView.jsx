@@ -182,6 +182,7 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
   const [editingDate, setEditingDate] = useState(initialEditingDate || null);
   const [editingText, setEditingText] = useState(initialEditingText || '');
   const [recordedAudioUri, setRecordedAudioUri] = useState(null);
+  const [sentenceBreaks, setSentenceBreaks] = useState([]);
   const previewButtonTranslateY = useRef(new RNAnimated.Value(200)).current; // Start off-screen
 
   // Sync with parent's editing state
@@ -332,12 +333,15 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
     setEditingDate(null);
     setEditingText('');
     setRecordedAudioUri(null);
+    setSentenceBreaks([]);
   };
 
   // Handle recording complete
-  const handleRecordingComplete = (uri) => {
+  const handleRecordingComplete = (uri, breaks) => {
     console.log('Recording completed:', uri);
+    console.log('Sentence breaks:', breaks);
     setRecordedAudioUri(uri);
+    setSentenceBreaks(breaks || []);
   };
 
   // Handle preview button press - call onPreview to navigate to preview mode
