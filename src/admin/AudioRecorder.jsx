@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, withSpring, Easing } from 'react-native-reanimated';
 import { Feather } from '@expo/vector-icons';
 import { useAudioRecorder, useAudioRecorderState, RecordingPresets, useAudioPlayer } from 'expo-audio';
 import { startRecording, stopRecording, formatDuration } from '../services/audioRecordingService';
+import { transcribeAudio } from '../services/googleSpeechService';
 
 /**
  * AudioRecorder Component
@@ -26,6 +27,7 @@ export function AudioRecorder({ onRecordingComplete }) {
   const [sentenceBreaks, setSentenceBreaks] = useState([]);
   const [recordedUri, setRecordedUri] = useState(null);
   const [isReviewMode, setIsReviewMode] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
 
   // Audio player for playback
   const player = useAudioPlayer(recordedUri || '');
@@ -95,13 +97,28 @@ export function AudioRecorder({ onRecordingComplete }) {
     setSentenceBreaks([]);
   };
 
-  const handleComplete = () => {
-    // Confirm recording and notify parent to show Preview button
-    console.log('Complete: confirming recording');
-    if (onRecordingComplete && recordedUri) {
-      onRecordingComplete(recordedUri, sentenceBreaks);
+  const handleComplete = async () => {
+    // Start transcription process
+    console.log('Complete: starting transcription...');
+    setIsTranscribing(true);
+
+    try {
+      // Call Google Speech-to-Text API
+      const result = await transcribeAudio(recordedUri, sentenceBreaks);
+
+      console.log('Transcription successful!');
+      console.log('Result:', result);
+
+      // Notify parent with transcription result
+      if (onRecordingComplete && recordedUri) {
+        onRecordingComplete(recordedUri, sentenceBreaks, result);
+      }
+    } catch (error) {
+      console.error('Transcription failed:', error);
+      alert(`Transcription error: ${error.message}\n\nPlease try recording again.`);
+      // Reset to review mode on error
+      setIsTranscribing(false);
     }
-    // DON'T reset state - keep review buttons visible
   };
 
   const handlePlayAudio = () => {
@@ -149,7 +166,13 @@ export function AudioRecorder({ onRecordingComplete }) {
 
   return (
     <View style={styles.container}>
-      {isReviewMode ? (
+      {isTranscribing ? (
+        // Transcribing state: Show loading spinner
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4a9eff" />
+          <Text style={styles.loadingText}>Transcribing...</Text>
+        </View>
+      ) : isReviewMode ? (
         // Review mode: Redo (left) + Play (center) + Complete (right)
         <View style={styles.reviewButtonsRow}>
           <TouchableOpacity
@@ -355,5 +378,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     marginTop: 6,
+  },
+
+  // Loading state
+  loadingContainer: {
+    alignItems: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '500',
   },
 });

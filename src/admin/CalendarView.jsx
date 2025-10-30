@@ -336,12 +336,19 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
     setSentenceBreaks([]);
   };
 
-  // Handle recording complete
-  const handleRecordingComplete = (uri, breaks) => {
+  // Handle recording complete with transcription
+  const handleRecordingComplete = (uri, breaks, transcriptionResult) => {
     console.log('Recording completed:', uri);
     console.log('Sentence breaks:', breaks);
+    console.log('Transcription result:', transcriptionResult);
+
     setRecordedAudioUri(uri);
     setSentenceBreaks(breaks || []);
+
+    // Set the transcribed text
+    if (transcriptionResult && transcriptionResult.text) {
+      setEditingText(transcriptionResult.text);
+    }
   };
 
   // Handle preview button press - call onPreview to navigate to preview mode
