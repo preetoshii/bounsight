@@ -1,21 +1,21 @@
-import { Audio } from 'expo-av';
+import { AudioPlayer } from 'expo-audio';
 
-// Sound objects cache
-const sounds = {};
+// Sound player cache
+const soundPlayers = {};
 
-// Load and cache a sound
-async function loadSound(name, source, volume = 1.0) {
-  if (sounds[name]) {
-    // Always set volume on cached sounds
-    await sounds[name].setVolumeAsync(volume);
-    return sounds[name];
+// Load and cache a sound player
+function loadSound(name, source, volume = 1.0) {
+  if (soundPlayers[name]) {
+    // Update volume on cached player
+    soundPlayers[name].volume = volume;
+    return soundPlayers[name];
   }
 
   try {
-    const { sound } = await Audio.Sound.createAsync(source);
-    await sound.setVolumeAsync(volume);
-    sounds[name] = sound;
-    return sound;
+    const player = new AudioPlayer(source);
+    player.volume = volume;
+    soundPlayers[name] = player;
+    return player;
   } catch (error) {
     console.warn(`Failed to load sound ${name}:`, error);
     return null;
@@ -45,23 +45,21 @@ export async function playSound(name) {
 
     // Set volume: 20% for all except gelato-create (100%)
     const volume = name === 'gelato-create' ? 1.0 : 0.2;
-    const sound = await loadSound(name, source, volume);
-    if (sound) {
-      await sound.replayAsync();
+    const player = loadSound(name, source, volume);
+
+    if (player) {
+      // Replay from beginning
+      player.currentTime = 0;
+      player.play();
     }
   } catch (error) {
     console.warn(`Failed to play sound ${name}:`, error);
   }
 }
 
-// Configure audio mode once at app start
+// Setup audio (expo-audio handles configuration automatically)
 export async function setupAudio() {
-  try {
-    await Audio.setAudioModeAsync({
-      playsInSilentModeIOS: true,
-      staysActiveInBackground: false,
-    });
-  } catch (error) {
-    console.warn('Failed to setup audio:', error);
-  }
+  // expo-audio doesn't require manual audio mode setup
+  // Configuration happens automatically per platform
+  console.log('Audio system ready (expo-audio)');
 }
