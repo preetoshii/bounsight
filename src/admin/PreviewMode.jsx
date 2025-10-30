@@ -1,76 +1,33 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Dimensions, Pressable } from 'react-native';
 import { GameRenderer } from '../game/render/GameRenderer';
-import { GameCore } from '../game/core/GameCore';
+import { useGameLoop } from '../game/hooks/useGameLoop';
 import { config } from '../config';
 import { playSound } from '../utils/audio';
 
 /**
  * PreviewMode - Game preview with draft message and overlay controls
  */
-export function PreviewMode({ message, isActive, onSave }) {
+export function PreviewMode({ message, isActive, onSave, audioUri, wordTimings, wordAudioSegments }) {
   const [dimensions] = useState(() => {
     const { width, height } = Dimensions.get('window');
     return { width, height };
   });
 
-  const gameCore = useRef(null);
-  const [, forceUpdate] = useState(0);
+  // Use shared game loop hook - ensures identical physics to main game
+  const {
+    gameCore,
+    mascotPos,
+    obstacles,
+    bounceImpact,
+    gelatoCreationTime,
+    currentWord,
+    mascotVelocityY,
+    lines,
+    setLines,
+  } = useGameLoop(dimensions, message, audioUri, wordTimings, wordAudioSegments);
 
-  // Game state refs
-  const mascotPos = useRef({ x: dimensions.width / 2, y: 100 });
-  const obstacles = useRef([]);
-  const bounceImpact = useRef(null);
-  const gelatoCreationTime = useRef(null);
-  const currentWord = useRef(null);
-  const mascotVelocityY = useRef(0);
-  const [lines, setLines] = useState([]);
   const [currentPath, setCurrentPath] = useState(null);
-  const lastGelatoData = useRef(null);
-
-  // Initialize preview game instance
-  useEffect(() => {
-    // Create GameCore with custom preview message
-    gameCore.current = new GameCore(dimensions.width, dimensions.height, message);
-
-    let animationFrameId;
-    let lastTime = performance.now();
-
-    const animate = (currentTime) => {
-      const deltaTime = currentTime - lastTime;
-      lastTime = currentTime;
-      const cappedDelta = Math.min(deltaTime, 16.667);
-
-      gameCore.current.step(cappedDelta);
-
-      // Update game state
-      mascotPos.current = gameCore.current.getMascotPosition();
-      obstacles.current = gameCore.current.getObstacles();
-      bounceImpact.current = gameCore.current.getBounceImpact();
-      gelatoCreationTime.current = gameCore.current.getGelatoCreationTime();
-      currentWord.current = gameCore.current.getCurrentWord();
-      mascotVelocityY.current = gameCore.current.getMascotVelocityY();
-
-      // Sync lines
-      const currentGelatoData = gameCore.current.getGelatoLineData();
-      if (currentGelatoData !== lastGelatoData.current) {
-        lastGelatoData.current = currentGelatoData;
-        setLines(currentGelatoData ? [currentGelatoData] : []);
-      }
-
-      forceUpdate(n => n + 1);
-      animationFrameId = requestAnimationFrame(animate);
-    };
-
-    animationFrameId = requestAnimationFrame(animate);
-
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-      if (gameCore.current) {
-        gameCore.current.destroy();
-      }
-    };
-  }, [message, dimensions.width, dimensions.height]);
 
   // Helper: Calculate total path length
   const calculatePathLength = (points) => {

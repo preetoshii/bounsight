@@ -7,7 +7,7 @@ import { playSound } from '../../utils/audio';
  * Handles all physics simulation, collision detection, and game state
  */
 export class GameCore {
-  constructor(width, height, customMessage = null) {
+  constructor(width, height, customMessage = null, audioUri = null, wordTimings = null, wordAudioSegments = null) {
     // Create Matter.js engine
     this.engine = Matter.Engine.create();
     this.world = this.engine.world;
@@ -21,6 +21,12 @@ export class GameCore {
 
     // Store custom message for preview mode
     this.customMessage = customMessage;
+
+    // Store audio data for voice playback
+    this.audioUri = audioUri;
+    this.wordTimings = wordTimings;
+    this.wordAudioSegments = wordAudioSegments; // Pre-sliced audio blobs for each word
+    this.currentAudioElement = null; // HTML5 Audio element for current word
 
     // Store target position for entrance animation
     this.mascotTargetY = height * 0.25; // 25% from top = 75% near top
@@ -104,7 +110,15 @@ export class GameCore {
 
     // Message system (Milestone 3)
     // Use custom message if provided (for preview mode), otherwise use default
-    if (customMessage) {
+    if (wordTimings && wordTimings.length > 0) {
+      // Use words from transcription (with exact timing alignment)
+      // Strip punctuation from displayed words
+      this.message = wordTimings.map(t =>
+        t.word.toLowerCase().replace(/[.,!?;:'"]/g, '')
+      );
+      console.log('Using transcribed words for message:', this.message);
+    } else if (customMessage) {
+      // Fall back to splitting custom message text
       this.message = customMessage.toLowerCase().split(/\s+/);
     } else {
       // Default fallback message (will be replaced by loaded message from GitHub)
@@ -117,7 +131,10 @@ export class GameCore {
     this.currentWord = null; // Currently displayed word { text, timestamp }
 
     // Load current message from messages.json if not in preview mode
-    if (!customMessage) {
+    // Preview mode is detected by presence of wordTimings or wordAudioSegments
+    const isPreviewMode = wordTimings || wordAudioSegments || customMessage;
+
+    if (!isPreviewMode) {
       this.messageLoadPromise = this.loadCurrentMessage();
     } else {
       // Preview mode - message is already set, resolve immediately
@@ -465,6 +482,32 @@ export class GameCore {
       initialVelocityY: mascotBody.velocity.y, // Store Y velocity at bounce
     };
 
+    // Play pre-sliced audio segment if available
+    if (this.wordAudioSegments && this.wordAudioSegments[this.wordIndex]) {
+      const segment = this.wordAudioSegments[this.wordIndex];
+
+      // Skip sentence break markers (*)
+      if (segment.word === '*') {
+        console.log('Skipping sentence break marker at word index', this.wordIndex);
+      } else if (segment.blobUri) {
+        try {
+          // Stop any currently playing audio
+          if (this.currentAudioElement) {
+            this.currentAudioElement.pause();
+            this.currentAudioElement = null;
+          }
+
+          // Create new HTML5 Audio element and play
+          this.currentAudioElement = new Audio(segment.blobUri);
+          this.currentAudioElement.play();
+
+          console.log(`Playing word "${segment.word}" from pre-sliced audio`);
+        } catch (error) {
+          console.error('Failed to play audio segment:', error);
+        }
+      }
+    }
+
     // Advance to next word (loop)
     this.wordIndex = (this.wordIndex + 1) % this.message.length;
   }
@@ -620,6 +663,16 @@ export class GameCore {
    * Clean up resources
    */
   destroy() {
+    // Clean up audio element
+    if (this.currentAudioElement) {
+      try {
+        this.currentAudioElement.pause();
+        this.currentAudioElement = null;
+      } catch (error) {
+        console.error('Failed to cleanup audio element:', error);
+      }
+    }
+
     Matter.World.clear(this.world);
     Matter.Engine.clear(this.engine);
   }

@@ -20,6 +20,11 @@ export function AdminPortal({ onClose, preloadedData }) {
   const [messagesData, setMessagesData] = useState(null); // Full messages.json data (includes _sha for updates)
   const [isLoading, setIsLoading] = useState(!preloadedData); // Loading state (false if data was preloaded)
 
+  // Audio recording data
+  const [draftAudioUri, setDraftAudioUri] = useState(null);
+  const [draftWordTimings, setDraftWordTimings] = useState(null);
+  const [draftWordAudioSegments, setDraftWordAudioSegments] = useState(null);
+
   // Load messages on mount (or use preloaded data)
   useEffect(() => {
     if (preloadedData) {
@@ -57,7 +62,10 @@ export function AdminPortal({ onClose, preloadedData }) {
   };
 
   // Navigate to preview mode from edit mode
-  const openPreview = () => {
+  const openPreview = (audioUri, wordTimings, wordAudioSegments) => {
+    setDraftAudioUri(audioUri);
+    setDraftWordTimings(wordTimings);
+    setDraftWordAudioSegments(wordAudioSegments);
     setCurrentView('preview');
   };
 
@@ -224,6 +232,9 @@ export function AdminPortal({ onClose, preloadedData }) {
           message={draftMessage}
           isActive={isEditingToday()}
           onSave={isEditingToday() ? sendNow : saveMessage}
+          audioUri={draftAudioUri}
+          wordTimings={draftWordTimings}
+          wordAudioSegments={draftWordAudioSegments}
         />
       )}
 

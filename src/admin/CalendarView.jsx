@@ -183,6 +183,8 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
   const [editingText, setEditingText] = useState(initialEditingText || '');
   const [recordedAudioUri, setRecordedAudioUri] = useState(null);
   const [sentenceBreaks, setSentenceBreaks] = useState([]);
+  const [wordTimings, setWordTimings] = useState(null);
+  const [wordAudioSegments, setWordAudioSegments] = useState(null);
   const previewButtonTranslateY = useRef(new RNAnimated.Value(200)).current; // Start off-screen
 
   // Sync with parent's editing state
@@ -334,6 +336,7 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
     setEditingText('');
     setRecordedAudioUri(null);
     setSentenceBreaks([]);
+    setWordTimings(null);
   };
 
   // Handle recording complete with transcription
@@ -345,18 +348,25 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
     setRecordedAudioUri(uri);
     setSentenceBreaks(breaks || []);
 
-    // Set the transcribed text
-    if (transcriptionResult && transcriptionResult.text) {
-      setEditingText(transcriptionResult.text);
+    // Store transcription data
+    if (transcriptionResult) {
+      if (transcriptionResult.text) {
+        setEditingText(transcriptionResult.text);
+      }
+      if (transcriptionResult.wordTimings) {
+        setWordTimings(transcriptionResult.wordTimings);
+      }
+      if (transcriptionResult.wordAudioSegments) {
+        setWordAudioSegments(transcriptionResult.wordAudioSegments);
+      }
     }
   };
 
   // Handle preview button press - call onPreview to navigate to preview mode
   const handlePreview = () => {
     playSound('preview');
-    // Pass the edited text to parent before navigating to preview
-    onSelectDate(editingDate, editingText);
-    onPreview();
+    // Pass audio data, word timings, and pre-sliced audio segments to preview
+    onPreview(recordedAudioUri, wordTimings, wordAudioSegments);
   };
 
   return (

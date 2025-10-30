@@ -163,10 +163,16 @@ export async function transcribeAudio(audioUri, sentenceBreaks = []) {
     console.log('Words:', wordsArray);
     console.log('Word timings:', wordTimings);
 
+    // Slice audio into individual word segments
+    console.log('Slicing audio into word segments...');
+    const { sliceAudioIntoWords } = await import('./audioSlicingService');
+    const wordAudioSegments = await sliceAudioIntoWords(audioUri, wordTimings);
+
     return {
       text: transcript,
       words: wordsArray,
       wordTimings,
+      wordAudioSegments, // Array of {word, blobUri} for each word
     };
   } catch (error) {
     console.error('Transcription error:', error);
