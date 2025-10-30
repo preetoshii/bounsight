@@ -1,6 +1,7 @@
 import Matter from 'matter-js';
 import { config } from '../../config';
 import { playSound } from '../../utils/audio';
+import { createAudioPlayer } from 'expo-audio';
 
 /**
  * GameCore - Physics engine using Matter.js
@@ -25,36 +26,17 @@ export class GameCore {
     // Store audio data for voice playback
     this.audioUri = audioUri;
     this.wordTimings = wordTimings;
-    this.wordAudioSegments = wordAudioSegments; // Pre-sliced audio blobs for each word
-    this.audioContext = null; // Web Audio API context
-    this.preloadedAudioBuffers = []; // Decoded AudioBuffers for instant playback
-    this.currentAudioSource = null; // Current AudioBufferSourceNode
+    this.wordAudioSegments = wordAudioSegments; // Keep for compatibility but won't use
+    this.audioPlayer = null; // expo-audio player for full recording
 
-    // Preload all audio segments using Web Audio API for lowest latency
-    if (wordAudioSegments && wordAudioSegments.length > 0) {
-      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      console.log('Web Audio API: Preloading', wordAudioSegments.length, 'audio segments...');
-
-      // Decode all audio segments into AudioBuffers
-      this.audioBufferLoadPromise = Promise.all(
-        wordAudioSegments.map(async (segment, index) => {
-          if (segment.blobUri) {
-            try {
-              const response = await fetch(segment.blobUri);
-              const arrayBuffer = await response.arrayBuffer();
-              const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
-              return audioBuffer;
-            } catch (error) {
-              console.error(`Failed to decode audio for "${segment.word}":`, error);
-              return null;
-            }
-          }
-          return null;
-        })
-      ).then(buffers => {
-        this.preloadedAudioBuffers = buffers;
-        console.log('✓ Web Audio API: All audio segments decoded and ready');
-      });
+    // Create expo-audio player for full recording if available
+    if (audioUri && wordTimings && wordTimings.length > 0) {
+      try {
+        this.audioPlayer = createAudioPlayer({ uri: audioUri });
+        console.log('Expo-audio player created for full recording');
+      } catch (error) {
+        console.error('Failed to create audio player:', error);
+      }
     }
 
     // Store target position for entrance animation
@@ -511,42 +493,34 @@ export class GameCore {
       initialVelocityY: mascotBody.velocity.y, // Store Y velocity at bounce
     };
 
-    // Play pre-sliced audio segment using Web Audio API
-    if (this.wordAudioSegments && this.wordAudioSegments[this.wordIndex]) {
-      const segment = this.wordAudioSegments[this.wordIndex];
+    // Play word from full audio recording by seeking to timestamp
+    if (this.audioPlayer && this.wordTimings && this.wordTimings[this.wordIndex]) {
+      const timing = this.wordTimings[this.wordIndex];
 
       // Skip sentence break markers (*)
-      if (segment.word === '*') {
+      if (timing.word === '*') {
         console.log('Skipping sentence break marker at word index', this.wordIndex);
-      } else if (segment.blobUri && this.audioContext) {
+      } else {
         try {
-          // Stop any currently playing audio source
-          if (this.currentAudioSource) {
-            this.currentAudioSource.stop();
-            this.currentAudioSource = null;
-          }
+          // Seek to word start time (convert ms to seconds)
+          const startSeconds = timing.start / 1000;
+          const endSeconds = timing.end / 1000;
+          const duration = endSeconds - startSeconds;
 
-          const startTime = performance.now();
+          // Seek and play using expo-audio
+          this.audioPlayer.seekTo(startSeconds);
+          this.audioPlayer.play();
 
-          // Check if audio buffer is loaded
-          const audioBuffer = this.preloadedAudioBuffers[this.wordIndex];
+          console.log(`🎵 "${timing.word}" (${startSeconds.toFixed(2)}s - ${endSeconds.toFixed(2)}s, ${(duration * 1000).toFixed(0)}ms)`);
 
-          if (audioBuffer) {
-            // Create a new source node (they can only be used once)
-            this.currentAudioSource = this.audioContext.createBufferSource();
-            this.currentAudioSource.buffer = audioBuffer;
-            this.currentAudioSource.connect(this.audioContext.destination);
-
-            // Start playback immediately (should be <1ms latency)
-            this.currentAudioSource.start(0);
-
-            const latency = performance.now() - startTime;
-            console.log(`🎵 "${segment.word}" (${latency.toFixed(2)}ms latency, Web Audio API)`);
-          } else {
-            console.warn(`⚠ Audio buffer for "${segment.word}" not yet loaded`);
-          }
+          // Stop playback at word end
+          setTimeout(() => {
+            if (this.audioPlayer) {
+              this.audioPlayer.pause();
+            }
+          }, duration * 1000);
         } catch (error) {
-          console.error('Web Audio API playback failed:', error);
+          console.error('Audio playback failed:', error);
         }
       }
     }
@@ -706,22 +680,13 @@ export class GameCore {
    * Clean up resources
    */
   destroy() {
-    // Clean up Web Audio API resources
-    if (this.currentAudioSource) {
+    // Clean up audio player
+    if (this.audioPlayer) {
       try {
-        this.currentAudioSource.stop();
-        this.currentAudioSource = null;
+        this.audioPlayer.pause();
+        this.audioPlayer = null;
       } catch (error) {
-        console.error('Failed to stop audio source:', error);
-      }
-    }
-
-    if (this.audioContext) {
-      try {
-        this.audioContext.close();
-        this.audioContext = null;
-      } catch (error) {
-        console.error('Failed to close audio context:', error);
+        console.error('Failed to cleanup audio:', error);
       }
     }
 

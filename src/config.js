@@ -5,6 +5,14 @@
  */
 
 export const config = {
+  // === AUDIO SYNC ===
+  audio: {
+    // Trim this many milliseconds from the start of each word slice
+    // Google's timestamps may include leading silence/breath sounds
+    // Increase if audio plays too early, decrease if too late
+    trimStartMs: 120, // Try values between 50-150ms
+  },
+
   // === PHYSICS ===
   physics: {
     gravityY: 1.0,            // Gravity strength (0.5 = floaty, 2.0 = heavy)

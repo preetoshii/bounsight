@@ -150,8 +150,6 @@ export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], 
     // Velocity negative (up) → offset negative (up), velocity positive (down) → offset positive (down)
     const normalizedVelocity = Math.max(-1, Math.min(1, mascotVelocityY / velocityRange));
     wordVerticalOffset = normalizedVelocity * maxOffset;
-
-    console.log('Velocity:', mascotVelocityY.toFixed(2), '→ Offset:', wordVerticalOffset.toFixed(2));
   }
 
   return (

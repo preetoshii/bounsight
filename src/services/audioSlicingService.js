@@ -52,8 +52,13 @@ export async function sliceAudioIntoWords(audioBlobUri, wordTimings) {
     const endTime = timing.end / 1000;
     const duration = endTime - startTime;
 
-    // Calculate sample offsets
-    const startSample = Math.floor(startTime * audioBuffer.sampleRate);
+    // Add padding to trim leading silence - Google's timestamps may be slightly early
+    // Start the slice 50-100ms later to skip initial silence/breath sounds
+    const TRIM_START_MS = 80; // Adjust this value to fine-tune audio sync
+    const adjustedStartTime = startTime + (TRIM_START_MS / 1000);
+
+    // Calculate sample offsets with adjusted start time
+    const startSample = Math.floor(adjustedStartTime * audioBuffer.sampleRate);
     const endSample = Math.ceil(endTime * audioBuffer.sampleRate);
     const length = endSample - startSample;
 
