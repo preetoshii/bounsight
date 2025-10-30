@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { playSound } from '../utils/audio';
 import { Pressable } from 'react-native';
 import { useHorizontalScroll } from '../utils/useHorizontalScroll';
+import { AudioRecorder } from './AudioRecorder';
 
 /**
  * Individual Card Item with Reanimated animations
@@ -28,6 +29,7 @@ function CardItem({
   formatDate,
   cardIndex,
   todayIndex,
+  onRecordingComplete,
 }) {
   // Shared values for animations
   const scale = useSharedValue(1);
@@ -148,24 +150,20 @@ function CardItem({
           )}
         </View>
 
-        {/* Message input/display - always the same element */}
+        {/* Message input/display or Audio Recorder */}
         <View style={styles.cardContent} pointerEvents={isEditing ? 'auto' : 'none'}>
-          <TextInput
-            ref={(ref) => { textInputRefs[slot.date] = ref; }}
-            style={[
+          {isEditing ? (
+            // Edit mode: Show Audio Recorder
+            <AudioRecorder onRecordingComplete={onRecordingComplete} />
+          ) : (
+            // Display mode: Show existing message
+            <Text style={[
               styles.messageInput,
-              hasMessage && !isEditing && { color: '#0a0a0a' } // Black text for populated cards
-            ]}
-            value={isEditing ? editingText : (message?.text || '')}
-            onChangeText={isEditing ? setEditingText : undefined}
-            placeholder="Write a message"
-            placeholderTextColor="#666"
-            multiline
-            scrollEnabled={true}
-            editable={isEditing}
-            showSoftInputOnFocus={isEditing}
-            textAlign="center"
-          />
+              hasMessage && { color: '#0a0a0a' } // Black text for populated cards
+            ]}>
+              {message?.text || ''}
+            </Text>
+          )}
         </View>
         </Animated.View>
       </TouchableOpacity>
@@ -183,6 +181,7 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
   const textInputRefs = useRef({}).current;
   const [editingDate, setEditingDate] = useState(initialEditingDate || null);
   const [editingText, setEditingText] = useState(initialEditingText || '');
+  const [recordedAudioUri, setRecordedAudioUri] = useState(null);
   const previewButtonTranslateY = useRef(new RNAnimated.Value(200)).current; // Start off-screen
 
   // Sync with parent's editing state
@@ -191,9 +190,9 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
     setEditingText(initialEditingText || '');
   }, [initialEditingDate, initialEditingText]);
 
-  // Animate preview button based on whether there's text
+  // Animate preview button based on whether there's a recording
   useEffect(() => {
-    if (editingText.trim()) {
+    if (recordedAudioUri) {
       RNAnimated.spring(previewButtonTranslateY, {
         toValue: 0,
         useNativeDriver: true,
@@ -208,7 +207,7 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
         stiffness: 300,
       }).start();
     }
-  }, [editingText]);
+  }, [recordedAudioUri]);
 
   // Generate date slots (past 7 days, today, next 30 days)
   const generateDateSlots = () => {
@@ -332,6 +331,13 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
   const handleBackFromEdit = () => {
     setEditingDate(null);
     setEditingText('');
+    setRecordedAudioUri(null);
+  };
+
+  // Handle recording complete
+  const handleRecordingComplete = (uri) => {
+    console.log('Recording completed:', uri);
+    setRecordedAudioUri(uri);
   };
 
   // Handle preview button press - call onPreview to navigate to preview mode
@@ -390,6 +396,7 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
                 formatDate={formatDate}
                 cardIndex={index}
                 todayIndex={todayIndex}
+                onRecordingComplete={handleRecordingComplete}
               />
             );
           })}
@@ -403,18 +410,18 @@ export function CalendarView({ scheduledMessages, onSelectDate, onPreview, initi
             styles.previewButtonContainer,
             { transform: [{ translateY: previewButtonTranslateY }] }
           ]}
-          pointerEvents={editingText.trim() ? 'auto' : 'none'} // Prevent clicks when hidden off-screen or disabled
+          pointerEvents={recordedAudioUri ? 'auto' : 'none'} // Prevent clicks when hidden off-screen or disabled
         >
           <Pressable
             style={[
               styles.previewButton,
-              !editingText.trim() && styles.previewButtonDisabled
+              !recordedAudioUri && styles.previewButtonDisabled
             ]}
             onPress={() => {
               playSound('click');
               handlePreview();
             }}
-            disabled={!editingText.trim()}
+            disabled={!recordedAudioUri}
           >
             <View style={styles.previewButtonContent}>
               <Feather name="play" size={20} color="#ffffff" style={{ marginRight: 8 }} />
