@@ -26,22 +26,35 @@ export class GameCore {
     this.audioUri = audioUri;
     this.wordTimings = wordTimings;
     this.wordAudioSegments = wordAudioSegments; // Pre-sliced audio blobs for each word
-    this.currentAudioElement = null; // HTML5 Audio element for current word
-    this.preloadedAudioElements = []; // Preloaded audio elements to reduce latency
+    this.audioContext = null; // Web Audio API context
+    this.preloadedAudioBuffers = []; // Decoded AudioBuffers for instant playback
+    this.currentAudioSource = null; // Current AudioBufferSourceNode
 
-    // Preload all audio segments to eliminate loading delay
+    // Preload all audio segments using Web Audio API for lowest latency
     if (wordAudioSegments && wordAudioSegments.length > 0) {
-      console.log('Preloading', wordAudioSegments.length, 'audio segments...');
-      this.preloadedAudioElements = wordAudioSegments.map((segment, index) => {
-        if (segment.blobUri) {
-          const audio = new Audio(segment.blobUri);
-          audio.preload = 'auto';
-          audio.load(); // Force immediate load
-          return audio;
-        }
-        return null;
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      console.log('Web Audio API: Preloading', wordAudioSegments.length, 'audio segments...');
+
+      // Decode all audio segments into AudioBuffers
+      this.audioBufferLoadPromise = Promise.all(
+        wordAudioSegments.map(async (segment, index) => {
+          if (segment.blobUri) {
+            try {
+              const response = await fetch(segment.blobUri);
+              const arrayBuffer = await response.arrayBuffer();
+              const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+              return audioBuffer;
+            } catch (error) {
+              console.error(`Failed to decode audio for "${segment.word}":`, error);
+              return null;
+            }
+          }
+          return null;
+        })
+      ).then(buffers => {
+        this.preloadedAudioBuffers = buffers;
+        console.log('✓ Web Audio API: All audio segments decoded and ready');
       });
-      console.log('Audio preloading initiated');
     }
 
     // Store target position for entrance animation
@@ -498,44 +511,42 @@ export class GameCore {
       initialVelocityY: mascotBody.velocity.y, // Store Y velocity at bounce
     };
 
-    // Play pre-sliced audio segment if available
+    // Play pre-sliced audio segment using Web Audio API
     if (this.wordAudioSegments && this.wordAudioSegments[this.wordIndex]) {
       const segment = this.wordAudioSegments[this.wordIndex];
 
       // Skip sentence break markers (*)
       if (segment.word === '*') {
         console.log('Skipping sentence break marker at word index', this.wordIndex);
-      } else if (segment.blobUri) {
+      } else if (segment.blobUri && this.audioContext) {
         try {
-          // Stop any currently playing audio
-          if (this.currentAudioElement) {
-            this.currentAudioElement.pause();
-            this.currentAudioElement.currentTime = 0;
+          // Stop any currently playing audio source
+          if (this.currentAudioSource) {
+            this.currentAudioSource.stop();
+            this.currentAudioSource = null;
           }
 
-          // Use preloaded audio if available, otherwise create new element
           const startTime = performance.now();
 
-          if (this.preloadedAudioElements[this.wordIndex]) {
-            // Use preloaded audio (should be instant)
-            this.currentAudioElement = this.preloadedAudioElements[this.wordIndex];
-            this.currentAudioElement.currentTime = 0; // Reset to start
-            const playPromise = this.currentAudioElement.play();
+          // Check if audio buffer is loaded
+          const audioBuffer = this.preloadedAudioBuffers[this.wordIndex];
 
-            playPromise.then(() => {
-              const latency = performance.now() - startTime;
-              console.log(`✓ Word "${segment.word}" playing (${latency.toFixed(1)}ms latency)`);
-            }).catch(err => {
-              console.error('Playback failed:', err);
-            });
+          if (audioBuffer) {
+            // Create a new source node (they can only be used once)
+            this.currentAudioSource = this.audioContext.createBufferSource();
+            this.currentAudioSource.buffer = audioBuffer;
+            this.currentAudioSource.connect(this.audioContext.destination);
+
+            // Start playback immediately (should be <1ms latency)
+            this.currentAudioSource.start(0);
+
+            const latency = performance.now() - startTime;
+            console.log(`🎵 "${segment.word}" (${latency.toFixed(2)}ms latency, Web Audio API)`);
           } else {
-            // Fallback: create new audio element
-            this.currentAudioElement = new Audio(segment.blobUri);
-            this.currentAudioElement.play();
-            console.warn(`⚠ Word "${segment.word}" not preloaded, creating new audio element`);
+            console.warn(`⚠ Audio buffer for "${segment.word}" not yet loaded`);
           }
         } catch (error) {
-          console.error('Failed to play audio segment:', error);
+          console.error('Web Audio API playback failed:', error);
         }
       }
     }
@@ -695,13 +706,22 @@ export class GameCore {
    * Clean up resources
    */
   destroy() {
-    // Clean up audio element
-    if (this.currentAudioElement) {
+    // Clean up Web Audio API resources
+    if (this.currentAudioSource) {
       try {
-        this.currentAudioElement.pause();
-        this.currentAudioElement = null;
+        this.currentAudioSource.stop();
+        this.currentAudioSource = null;
       } catch (error) {
-        console.error('Failed to cleanup audio element:', error);
+        console.error('Failed to stop audio source:', error);
+      }
+    }
+
+    if (this.audioContext) {
+      try {
+        this.audioContext.close();
+        this.audioContext = null;
+      } catch (error) {
+        console.error('Failed to close audio context:', error);
       }
     }
 
