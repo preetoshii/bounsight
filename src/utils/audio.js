@@ -1,4 +1,4 @@
-import { AudioPlayer } from 'expo-audio';
+import { createAudioPlayer } from 'expo-audio';
 
 // Sound player cache
 const soundPlayers = {};
@@ -12,7 +12,7 @@ function loadSound(name, source, volume = 1.0) {
   }
 
   try {
-    const player = new AudioPlayer(source);
+    const player = createAudioPlayer(source);
     player.volume = volume;
     soundPlayers[name] = player;
     return player;
@@ -49,7 +49,7 @@ export async function playSound(name) {
 
     if (player) {
       // Replay from beginning
-      player.currentTime = 0;
+      player.seekTo(0);
       player.play();
     }
   } catch (error) {
