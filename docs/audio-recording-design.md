@@ -25,17 +25,15 @@ This document defines the complete technical design and requirements for Bounsig
 - **Playback:** expo-audio player with segment seeking
 
 **MVP Scope:**
-- ✅ Record audio in admin UI
+- ✅ Record audio in admin UI with live waveform visualization
+- ✅ Sentence break markers during recording (tap button to mark sentence boundaries)
 - ✅ Auto-transcribe with word-level timestamps
 - ✅ Display transcription (read-only)
-- ✅ Store audio in GitHub
-- ✅ Play word segments on ball bounce
-- ✅ Preview mode with recorded audio
+- ✅ Store audio in GitHub with smart naming
+- ✅ Play word segments on ball bounce with millisecond precision
+- ✅ Auto-preview mode after transcription completes
 - ❌ Text editing (low priority - re-record instead)
 - ❌ Reference pad (low priority - future feature)
-- ❌ Sentence break markers (low priority - future feature)
-
-**Timeline:** ~2-3 weeks for full implementation
 
 ---
 
@@ -247,14 +245,20 @@ const timingsArray = words.map(w => ({              // [timing0, timing1, timing
 **Data Structure:**
 ```json
 {
-  "words": ["you", "are", "loved"],
+  "words": ["you", "are", "brave", "*", "you", "are", "loved"],
   "wordTimings": [
-    {"word": "you", "start": 0, "end": 300},      // ← words[0] aligns with wordTimings[0]
-    {"word": "are", "start": 400, "end": 600},    // ← words[1] aligns with wordTimings[1]
-    {"word": "loved", "start": 700, "end": 1200}  // ← words[2] aligns with wordTimings[2]
+    {"word": "you", "start": 0, "end": 300},
+    {"word": "are", "start": 400, "end": 600},
+    {"word": "brave", "start": 700, "end": 1200},
+    {"word": "*", "start": 1200, "end": 1200},     // ← Sentence break marker (zero duration)
+    {"word": "you", "start": 1500, "end": 1800},
+    {"word": "are", "start": 1900, "end": 2100},
+    {"word": "loved", "start": 2200, "end": 2700}
   ]
 }
 ```
+
+**Sentence Break Marker:** Special asterisk character `"*"` inserted into words array at sentence boundaries with zero-duration timing. Gameplay can detect this and trigger jingle, award points, visual effects, etc.
 
 **Gameplay Implementation:**
 ```javascript
@@ -299,10 +303,17 @@ setTimeout(() => {
 **Storage Structure:**
 ```
 /message-audio/
-  2025-10-25.m4a
-  2025-10-26.m4a
-  2025-10-27.m4a
+  you-are-loved_2025-10-25.m4a
+  you-deserve-good_2025-10-26.m4a
+  your-presence-matters_2025-10-27.m4a
+  you-are-loved_2025-10-27_02.m4a  ← Multiple recordings same day
 ```
+
+**Naming Convention:** `{first-3-words}_{date}_{optional-counter}.m4a`
+- First 3 words of transcription (lowercase, hyphenated)
+- Date (YYYY-MM-DD)
+- Optional counter (_02, _03) if multiple recordings same day
+- Easy to browse, sort, and identify specific messages
 
 **Rationale:**
 - **Simplest implementation:** No new infrastructure or services required
@@ -321,10 +332,11 @@ setTimeout(() => {
 - Capacity: ~500-1000 messages before considering migration
 
 **Audio Format:**
-- All platforms: `.m4a` (AAC encoding, ~128kbps)
+- **All platforms:** `.m4a` (AAC encoding, ~128kbps)
 - Highly compressed and efficient
 - Native support across web, iOS, and Android
 - Single format simplifies storage and playback
+- **Web uses M4A:** Modern browsers (Chrome, Safari, Firefox, Edge) natively support audio/mp4 MIME type
 
 **Upload Implementation:**
 ```javascript
@@ -512,9 +524,22 @@ const player = useAudioPlayer(audioUri);
 player.play();
 
 // Seek to specific timestamp (for word playback)
-player.seekTo(startTimeMs / 1000); // Convert ms to seconds
+// NOTE: Despite documentation, seekTo() uses MILLISECONDS, not seconds
+player.seekTo(startTimeMs); // e.g., 700 for 700ms
 setTimeout(() => player.pause(), durationMs);
 ```
+
+**Millisecond Precision:**
+- expo-audio's `seekTo()` uses **milliseconds** internally (despite docs saying seconds)
+- Perfect for precise word segment playback
+- Example: `player.seekTo(700)` seeks to 700ms (0.7 seconds)
+- iOS allows tolerance settings for even greater precision if needed
+
+**Audio Effects:**
+- expo-audio does **NOT** support real-time audio effects (EQ, reverb, compression, filters)
+- Focused on playback/recording only, not audio processing
+- Web Audio API has full effects, but not available in React Native
+- For MVP: No effects needed, just segment playback ✅
 
 **Recording State Management:**
 ```javascript
@@ -689,6 +714,159 @@ When word 3 plays:
 
 ---
 
+---
+
+### 6. Sentence Break Markers ✅
+
+**Decision:** Implement sentence break button during recording to mark sentence boundaries for future gameplay features
+
+**Rationale:**
+- **Enhanced gameplay:** Enable special interactions at sentence boundaries (jingles, points, pauses, visual effects)
+- **Simple implementation:** Record timestamp when button pressed, insert marker in word array
+- **Future flexibility:** Can add gameplay features without re-recording messages
+- **User control:** Creator decides where meaningful breaks occur
+
+**Recording UI:**
+
+During recording, show "Sentence Break" button alongside recording controls:
+
+```javascript
+{isRecording && (
+  <View style={styles.recordingControls}>
+    <Button
+      onPress={markSentenceBreak}
+      style={styles.sentenceBreakButton}
+    >
+      ✂️ Sentence Break
+    </Button>
+
+    <View style={styles.recordingStatus}>
+      <Text>● Recording... {durationSeconds}s</Text>
+    </View>
+
+    <Button onPress={stopRecording}>
+      ⏹️ Stop
+    </Button>
+  </View>
+)}
+```
+
+**User Workflow:**
+1. User starts recording
+2. Speaks: "you are brave"
+3. Presses "Sentence Break" button
+4. Continues speaking: "you are loved"
+5. Stops recording
+6. System inserts `"*"` marker at break point
+
+**Data Structure:**
+
+Sentence breaks represented as special `"*"` character in words array:
+
+```json
+{
+  "text": "you are brave you are loved",
+  "words": ["you", "are", "brave", "*", "you", "are", "loved"],
+  "wordTimings": [
+    {"word": "you", "start": 0, "end": 300},
+    {"word": "are", "start": 400, "end": 600},
+    {"word": "brave", "start": 700, "end": 1200},
+    {"word": "*", "start": 1200, "end": 1200},     // ← Zero-duration marker
+    {"word": "you", "start": 1500, "end": 1800},
+    {"word": "are", "start": 1900, "end": 2100},
+    {"word": "loved", "start": 2200, "end": 2700}
+  ],
+  "sentenceBreakIndices": [3]  // Optional: explicit list of marker positions
+}
+```
+
+**Implementation Details:**
+
+```javascript
+// Track sentence breaks during recording
+const sentenceBreaks = useRef([]);
+const recordingStartTime = useRef(null);
+
+const markSentenceBreak = () => {
+  const currentTime = Date.now() - recordingStartTime.current;
+  sentenceBreaks.current.push(currentTime);
+  // Visual/audio feedback
+  playSound('sentence-break-click');
+};
+
+// After transcription, insert markers
+const insertSentenceBreaks = (transcription, breaks) => {
+  const { words, wordTimings } = transcription;
+
+  // For each sentence break timestamp
+  breaks.forEach(breakTime => {
+    // Find word that was spoken just before break
+    const breakIndex = wordTimings.findIndex(
+      (timing, idx) => {
+        const nextTiming = wordTimings[idx + 1];
+        return timing.end <= breakTime &&
+               (!nextTiming || nextTiming.start > breakTime);
+      }
+    );
+
+    // Insert marker after that word
+    words.splice(breakIndex + 1, 0, "*");
+    wordTimings.splice(breakIndex + 1, 0, {
+      word: "*",
+      start: breakTime,
+      end: breakTime
+    });
+  });
+
+  return { words, wordTimings };
+};
+```
+
+**Gameplay Usage:**
+
+```javascript
+// In GameCore - detect sentence breaks
+const revealNextWord = () => {
+  const word = message.words[currentWordIndex];
+
+  if (word === "*") {
+    // Sentence break detected!
+    playSound('sentence-complete-jingle');
+    awardPoints(10);
+    showVisualEffect('sparkle');
+    // Don't display anything (invisible marker)
+  } else {
+    // Normal word reveal
+    displayWord(word);
+    playWordAudio(wordTimings[currentWordIndex]);
+  }
+
+  currentWordIndex++;
+};
+```
+
+**Edge Case Handling:**
+
+If user presses sentence break button mid-word or slightly early:
+- System finds the word that STARTED before the button press
+- Inserts marker AFTER that word completes
+- Ensures marker is between words, not during a word
+
+**Future Gameplay Features:**
+- Play special jingle at sentence boundaries
+- Award bonus points for completing sentences
+- Visual effects (sparkles, screen flash) between sentences
+- Pause/timing adjustments for dramatic effect
+- Achievement tracking (sentences completed)
+
+**Addresses MVP Requirements:**
+- ✅ Sentence break markers are core MVP feature
+- ✅ Simple button in recording UI
+- ✅ Zero-duration marker in data structure
+- ✅ Flexible for future gameplay enhancements
+
+---
+
 ## 💡 Ideas for Future Implementation (Low Priority)
 
 ### 1. Reference Pad for Recording
@@ -735,119 +913,365 @@ When word 3 plays:
 
 ---
 
-### 2. Sentence Break Button During Recording
+## 📱 User Experience
 
-**Idea:** Button that marks sentence boundaries while recording, creating metadata for special gameplay interactions.
+### Admin Recording Flow (MVP) - Detailed UX
 
-**Use Case:** User recording multiple sentences, wants to mark where sentences end for gameplay features (jingles, points, pauses, etc.)
+#### 1. Calendar View State
+**Initial State (No Recording):**
+- Date card shows **`+` button** in center
+- Tapping `+` navigates to Edit View for that date
 
-**Proposed UI:**
+#### 2. Edit View - Ready to Record
+**Layout:**
+- **Top Left:** Back button (← returns to Calendar View)
+- **Bottom Center:** Large "🎤 Record" button
+- **Screen:** Minimal, ready for recording
+
+```javascript
+<View style={styles.editView}>
+  {/* Top Navigation */}
+  <Pressable style={styles.backButton} onPress={backToCalendar}>
+    <Feather name="arrow-left" size={24} color="#fff" />
+  </Pressable>
+
+  {/* Date Display */}
+  <Text style={styles.dateHeader}>{formattedDate}</Text>
+
+  {/* Record Button (Not Recording) */}
+  {!isRecording && (
+    <Button
+      style={styles.recordButton}
+      onPress={startRecording}
+    >
+      🎤 Record
+    </Button>
+  )}
+</View>
+```
+
+#### 3. Recording State
+**When user presses Record button:**
+- **Center:** Live audio waveform visualization (shows voice input)
+- **Bottom Left:** "✂️ Sentence Break" button
+- **Bottom Center:** "⏹️ Stop" button (replaces Record button)
+- **Status:** "● Recording... {seconds}s" near waveform
+
 ```javascript
 {isRecording && (
-  <View style={styles.recordingControls}>
-    <Button onPress={markSentenceBreak}>
-      ✂️ Mark Sentence Break
-    </Button>
-    <Text>Press when you finish a sentence</Text>
+  <View style={styles.recordingView}>
+    {/* Audio Waveform Visualization */}
+    <View style={styles.waveformContainer}>
+      <AudioWaveform
+        audioLevel={currentAudioLevel}
+        isRecording={true}
+      />
+      <Text style={styles.recordingStatus}>
+        ● Recording... {durationSeconds}s
+      </Text>
+    </View>
+
+    {/* Recording Controls */}
+    <View style={styles.recordingControls}>
+      {/* Sentence Break Button - Bottom Left */}
+      <Button
+        style={styles.sentenceBreakButton}
+        onPress={markSentenceBreak}
+      >
+        ✂️ Sentence Break
+      </Button>
+
+      {/* Stop Button - Bottom Center */}
+      <Button
+        style={styles.stopButton}
+        onPress={stopRecording}
+      >
+        ⏹️ Stop
+      </Button>
+    </View>
   </View>
 )}
 ```
 
-**How It Works:**
-- User speaks: "you are brave"
-- Presses "Mark Sentence Break" button
-- Continues speaking: "you are loved"
-- Button press creates timestamp marker
+**User Actions During Recording:**
+- Speak message naturally with word gaps
+- Press "✂️ Sentence Break" between sentences (optional)
+- Visual/audio feedback when sentence break marked
+- Waveform shows real-time audio input
+- Press "⏹️ Stop" when finished
 
-**Data Structure:**
-```json
-{
-  "words": ["you", "are", "brave", "you", "are", "loved"],
-  "wordTimings": [...],
-  "sentenceBreaks": [2, 5]  // After word index 2 and 5
-}
+#### 4. Post-Recording State
+**After pressing Stop button:**
+- **Bottom Left:** "↻ Redo" button (re-record from scratch)
+- **Bottom Right:** "✓ Complete" button (confirm and transcribe)
+- Waveform remains visible but static (playback visualization)
+
+```javascript
+{hasRecording && !isTranscribing && (
+  <View style={styles.reviewView}>
+    {/* Static Waveform */}
+    <AudioWaveform
+      audioLevel={recordedWaveform}
+      isRecording={false}
+    />
+
+    {/* Review Controls */}
+    <View style={styles.reviewControls}>
+      {/* Redo - Bottom Left */}
+      <Button
+        style={styles.redoButton}
+        onPress={redoRecording}
+      >
+        ↻ Redo
+      </Button>
+
+      {/* Complete - Bottom Right */}
+      <Button
+        style={styles.completeButton}
+        onPress={confirmRecording}
+      >
+        ✓ Complete
+      </Button>
+    </View>
+  </View>
+)}
 ```
 
-**Future Gameplay Uses:**
-- Play jingle when reaching sentence break
-- Award points for completing sentences
-- Visual effects between sentences
-- Pause/timing adjustments
+#### 5. Transcription Processing State
+**After pressing Complete button:**
+- **Complete button** transforms into **loading spinner**
+- Text: "Transcribing..."
+- No modals or overlays - simple inline loading indicator
+- Processing via Google Cloud Speech-to-Text API
 
-**Edge Case Handling:** If user presses button mid-word or slightly early, system marks the word that STARTED before the button press as the last word of the sentence.
+```javascript
+{isTranscribing && (
+  <View style={styles.transcribingView}>
+    <AudioWaveform
+      audioLevel={recordedWaveform}
+      isRecording={false}
+    />
 
-**Priority:** Low - Interesting feature but not essential for MVP
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color="#ffffff" />
+      <Text style={styles.loadingText}>Transcribing...</Text>
+    </View>
+  </View>
+)}
+```
 
----
+#### 6. Auto-Preview Mode
+**After transcription completes:**
+- **Automatically** navigates to Preview Mode (no manual button press)
+- Full-screen gameplay preview with recorded audio
+- Ball bounces on gelato, reveals words with voice segments
+- Same preview experience as before, now with real voice
 
-## 📱 User Experience
+**Preview Mode UI:**
+- **Top Left:** Back button (← returns to Edit View)
+- **Bottom Center:** "💾 Save" or "Send" button
+- **Game Canvas:** Full gameplay simulation
 
-### Admin Recording Flow (MVP)
-1. User opens admin portal, navigates to date card
-2. Press "Record" button
-3. Speak message with natural word gaps
-4. Press "Stop" button
-5. System processes: transcribe audio + detect word timings (via Google Cloud Speech-to-Text)
-6. Display transcribed text (read-only)
-7. If incorrect → "Re-record" button to try again
-8. If correct → Press "Preview" button
-9. Preview gameplay experience with voice
-10. Press "Save" to deploy (uploads audio to GitHub + updates messages.json)
+```javascript
+// Auto-navigation after transcription
+useEffect(() => {
+  if (transcriptionComplete) {
+    // Automatically open preview
+    setCurrentView('preview');
+  }
+}, [transcriptionComplete]);
+
+// Preview Mode Component
+<PreviewMode
+  message={transcribedText}
+  audioUrl={recordedAudioUri}
+  wordTimings={wordTimings}
+  onBack={backToEditView}
+  onSave={saveMessage}
+/>
+```
+
+**Preview Mode Actions:**
+- User experiences full gameplay with their voice
+- If satisfied → Press "💾 Save" to deploy
+- If not satisfied → Press back, then "↻ Redo" to re-record
+
+#### 7. Save/Deploy
+**After pressing Save button:**
+- Upload audio file to GitHub (`message-audio/{first-3-words}_{date}.m4a`)
+- Update messages.json with transcription + wordTimings
+- Show success confirmation
+- Return to Calendar View (card now shows recording exists)
 
 ---
 
 ## 🎨 UI Components (MVP)
 
-### Recording Card (Modified CalendarView Card)
+### 1. Calendar Card States
 
-**Replace text input with recording interface:**
-
+**Empty Card (No Recording):**
 ```javascript
-// Current edit mode → Replace with recording mode
 <View style={styles.card}>
-  <Text style={styles.date}>{date}</Text>
-
-  {/* Recording State */}
-  {!isRecording && !hasRecording && (
-    <Button onPress={startRecording}>🎤 Record</Button>
-  )}
-
-  {isRecording && (
-    <View>
-      <Text>● Recording... {durationSeconds}s</Text>
-      <Button onPress={stopRecording}>⏹️ Stop</Button>
-    </View>
-  )}
-
-  {hasRecording && !transcription && (
-    <ActivityIndicator />
-    <Text>Transcribing...</Text>
-  )}
-
-  {transcription && (
-    <View>
-      <Text style={styles.transcription}>{transcription}</Text>
-      <Button onPress={reRecord}>Re-record</Button>
-      <Button onPress={openPreview}>Preview</Button>
-    </View>
-  )}
+  <Text style={styles.date}>Oct 25, 2025</Text>
+  <Pressable style={styles.addButton} onPress={() => openEdit(date)}>
+    <Text style={styles.plusIcon}>+</Text>
+  </Pressable>
 </View>
 ```
 
-### Preview Mode (Existing, Minor Modifications)
+**Card with Recording:**
+```javascript
+<View style={styles.card}>
+  <Text style={styles.date}>Oct 25, 2025</Text>
+  <View style={styles.messagePreview}>
+    <Text style={styles.messageText}>you are loved</Text>
+    <Feather name="mic" size={16} color="#888" />
+  </View>
+</View>
+```
 
-**Keep existing preview mode, modify to:**
-- Load audio from recorded file (not AI-generated)
-- Play word segments using wordTimings
+### 2. Edit View Component
+
+**States:**
+1. **Ready** - Show Record button
+2. **Recording** - Show waveform, Sentence Break button, Stop button
+3. **Review** - Show static waveform, Redo button, Complete button
+4. **Transcribing** - Show loading spinner
+5. **Preview** - Auto-navigate to preview mode
 
 ```javascript
-// In GameCore - word reveal with audio segment playback
-const playWordSegment = (wordIndex) => {
-  const timing = message.wordTimings[wordIndex];
-  audioPlayer.seekTo(timing.start / 1000);
-  setTimeout(() => audioPlayer.pause(), timing.end - timing.start);
+<View style={styles.editView}>
+  {/* Back Button */}
+  <Pressable style={styles.backButton} onPress={backToCalendar}>
+    <Feather name="arrow-left" size={24} />
+  </Pressable>
+
+  {/* Date Header */}
+  <Text style={styles.dateHeader}>{formattedDate}</Text>
+
+  {/* State-based Content */}
+  {renderCurrentState()}
+</View>
+```
+
+### 3. Audio Waveform Component
+
+**Real-time visualization during recording:**
+```javascript
+<AudioWaveform
+  audioLevel={currentAudioLevel}      // 0-1 amplitude
+  isRecording={true}                   // Animating
+  color="#4CAF50"                      // Green when recording
+  height={100}
+  style={styles.waveform}
+/>
+```
+
+**Static visualization after recording:**
+```javascript
+<AudioWaveform
+  audioLevel={recordedWaveform}        // Array of amplitudes
+  isRecording={false}                  // Static
+  color="#888888"                      // Gray when not recording
+  height={100}
+  style={styles.waveform}
+/>
+```
+
+### 4. Recording Controls Layout
+
+**Positioning:**
+- Sentence Break button: Bottom Left
+- Stop button: Bottom Center
+- Maintains consistent positioning throughout recording
+
+```javascript
+<View style={styles.recordingControls}>
+  <Button style={styles.leftButton}>✂️ Sentence Break</Button>
+  <Button style={styles.centerButton}>⏹️ Stop</Button>
+</View>
+
+const styles = StyleSheet.create({
+  recordingControls: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    paddingBottom: 60,
+  },
+  leftButton: {
+    flex: 1,
+    marginRight: 20,
+  },
+  centerButton: {
+    flex: 1,
+  },
+});
+```
+
+### 5. Review Controls Layout
+
+**After stopping:**
+```javascript
+<View style={styles.reviewControls}>
+  <Button style={styles.leftButton}>↻ Redo</Button>
+  <Button style={styles.rightButton}>✓ Complete</Button>
+</View>
+```
+
+### 6. Preview Mode Integration
+
+**Modify existing PreviewMode component:**
+- Accept `audioUrl` and `wordTimings` props
+- Load audio file with expo-audio
+- Play word segments using millisecond-precision seeking
+- Keep existing game simulation
+
+```javascript
+// In GameCore - modified word reveal with audio playback
+const revealNextWord = () => {
+  const wordIndex = this.currentWordIndex;
+  const word = this.message.words[wordIndex];
+  const timing = this.message.wordTimings[wordIndex];
+
+  // Check for sentence break marker
+  if (word === "*") {
+    // Sentence break - play jingle, no visual word
+    playSound('sentence-jingle');
+    this.currentWordIndex++;
+    return;
+  }
+
+  // Normal word reveal
+  this.currentWord = {
+    text: word,
+    timestamp: Date.now()
+  };
+
+  // Play audio segment (millisecond precision)
+  if (this.audioPlayer) {
+    this.audioPlayer.seekTo(timing.start);  // expo-audio uses milliseconds
+    setTimeout(() => {
+      this.audioPlayer.pause();
+    }, timing.end - timing.start);
+  }
+
+  this.currentWordIndex++;
 };
 ```
+
+---
+
+## 🎯 UX Flow Summary
+
+1. **Calendar** → Tap `+` on empty card
+2. **Edit (Ready)** → Press 🎤 Record button
+3. **Edit (Recording)** → Speak + tap ✂️ for sentence breaks + press ⏹️ Stop
+4. **Edit (Review)** → Press ↻ Redo OR ✓ Complete
+5. **Edit (Transcribing)** → Loading spinner (automatic)
+6. **Preview** → Automatic navigation, experience gameplay
+7. **Preview** → Press 💾 Save to deploy
+8. **Calendar** → Card now shows recording
 
 ---
 
@@ -913,13 +1337,17 @@ src/services/
   "current": "2025-10-25",
   "messages": {
     "2025-10-25": {
-      "text": "you are loved",
-      "words": ["you", "are", "loved"],
-      "audioUrl": "message-audio/2025-10-25.m4a",
+      "text": "you are brave you are loved",
+      "words": ["you", "are", "brave", "*", "you", "are", "loved"],
+      "audioUrl": "message-audio/you-are-brave_2025-10-25.m4a",
       "wordTimings": [
         {"word": "you", "start": 0, "end": 300},
         {"word": "are", "start": 400, "end": 600},
-        {"word": "loved", "start": 700, "end": 1200}
+        {"word": "brave", "start": 700, "end": 1200},
+        {"word": "*", "start": 1200, "end": 1200},
+        {"word": "you", "start": 1500, "end": 1800},
+        {"word": "are", "start": 1900, "end": 2100},
+        {"word": "loved", "start": 2200, "end": 2700}
       ]
     }
   }
@@ -927,12 +1355,18 @@ src/services/
 ```
 
 **New Fields:**
-- `audioUrl`: Path to audio file in GitHub repo
-- `wordTimings`: Array of timing objects with start/end in milliseconds
+- `audioUrl`: Path to audio file in GitHub repo (smart naming: `{first-3-words}_{date}.m4a`)
+- `wordTimings`: Array of timing objects with start/end in **milliseconds**
 
 **Preserved Fields:**
-- `text`: Full message text (from transcription)
-- `words`: Array of individual words (from transcription)
+- `text`: Full message text (from transcription, no sentence break markers in text)
+- `words`: Array of individual words (includes `"*"` markers for sentence breaks)
+
+**Sentence Break Markers:**
+- Special `"*"` character in `words` array marks sentence boundaries
+- Zero-duration timing (`start === end`)
+- Not displayed visually, triggers gameplay events (jingles, points, effects)
+- Inserted at timestamps when user pressed "✂️ Sentence Break" button during recording
 
 ### Audio File Storage
 
