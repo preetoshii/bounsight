@@ -96,6 +96,7 @@ function WaveLetter({ letter, index, totalLetters }) {
 /**
  * GameRenderer - Unified Skia renderer for all platforms
  * This same code works on Web, iOS, and Android
+ * Touch events pass through the Canvas to allow line drawing
  */
 export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], lines = [], currentPath = null, bounceImpact = null, gelatoCreationTime = null, currentWord = null, mascotVelocityY = 0, squashStretch = { scaleX: 1, scaleY: 1 } }) {
   // Calculate word opacity based on configured fade mode
@@ -153,8 +154,8 @@ export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], 
   }
 
   return (
-    <View style={{ width, height, position: 'relative' }}>
-      <Canvas style={{ width, height }}>
+    <View style={{ width, height, position: 'relative' }} pointerEvents="box-none">
+      <Canvas style={{ width, height }} pointerEvents="none">
         {/* Background */}
         <Fill color={config.visuals.backgroundColor} />
 

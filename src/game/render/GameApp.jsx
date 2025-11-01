@@ -235,6 +235,7 @@ export function GameApp() {
   // Touch handlers for drawing lines
   const handleTouchStart = (event) => {
     const touch = event.nativeEvent.touches?.[0] || event.nativeEvent;
+    console.log('🎨 Touch start:', touch.pageX, touch.pageY);
     setCurrentPath([{ x: touch.pageX, y: touch.pageY }]);
   };
 
