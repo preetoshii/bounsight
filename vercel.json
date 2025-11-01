@@ -1,6 +1,6 @@
 {
-  "installCommand": "cd api && npm install",
-  "buildCommand": "echo 'API functions ready'",
+  "buildCommand": "npm install && cd api && npm install && cd .. && npx expo export -p web",
+  "outputDirectory": "dist",
   "headers": [
     {
       "source": "/api/(.*)",
