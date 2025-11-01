@@ -15,9 +15,10 @@ import { GameCore } from '../core/GameCore';
  * @param {string|null} customMessage - Optional custom message for preview mode
  * @param {string|null} audioUri - Optional audio URI for voice playback
  * @param {Array|null} wordTimings - Optional word timings for voice sync
+ * @param {number|null} fpsCap - Optional FPS cap (null = uncapped)
  * @returns {Object} - Game state and refs for rendering
  */
-export function useGameLoop(dimensions, customMessage = null, audioUri = null, wordTimings = null, wordAudioSegments = null) {
+export function useGameLoop(dimensions, customMessage = null, audioUri = null, wordTimings = null, wordAudioSegments = null, fpsCap = null) {
   const gameCore = useRef(null);
   const [, forceUpdate] = useState(0);
 
@@ -52,8 +53,18 @@ export function useGameLoop(dimensions, customMessage = null, audioUri = null, w
 
     let animationFrameId;
     let lastTime = performance.now();
+    let lastFrameTime = performance.now(); // For FPS cap
 
     const animate = (currentTime) => {
+      // FPS cap: Skip this frame if not enough time has passed
+      const minFrameTime = fpsCap ? (1000 / fpsCap) : 0;
+      if (fpsCap && (currentTime - lastFrameTime < minFrameTime)) {
+        // Schedule next frame but skip work
+        animationFrameId = requestAnimationFrame(animate);
+        return;
+      }
+      lastFrameTime = currentTime;
+
       const deltaTime = currentTime - lastTime;
       lastTime = currentTime;
 
@@ -92,7 +103,7 @@ export function useGameLoop(dimensions, customMessage = null, audioUri = null, w
       // Force re-render (at display refresh rate for smooth visuals)
       forceUpdate(n => n + 1);
 
-      // Continue animation loop
+      // Schedule next frame at the end
       animationFrameId = requestAnimationFrame(animate);
     };
 
@@ -104,7 +115,7 @@ export function useGameLoop(dimensions, customMessage = null, audioUri = null, w
         gameCore.current.destroy();
       }
     };
-  }, [dimensions.width, dimensions.height, customMessage, audioUri, wordTimings, wordAudioSegments]);
+  }, [dimensions.width, dimensions.height, customMessage, audioUri, wordTimings, wordAudioSegments, fpsCap]);
 
   return {
     gameCore,

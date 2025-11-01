@@ -66,6 +66,7 @@ export function GameApp() {
 
   // FPS cap control (DEV ONLY)
   const [fpsCap, setFpsCap] = useState(null); // null = uncapped, or 10-120
+  const fpsCapRef = useRef(fpsCap); // Use ref to avoid remounting effect
   const fpsCapOptions = [null, 10, 20, 30, 40, 50, 60, 70, 80, 90, 120];
   const [showFpsMenu, setShowFpsMenu] = useState(false);
 
@@ -84,6 +85,11 @@ export function GameApp() {
     global.runtimeHapticsConfig = hapticsConfig;
   }, [hapticsConfig]);
 
+  // Sync fpsCap ref when state changes
+  useEffect(() => {
+    fpsCapRef.current = fpsCap;
+  }, [fpsCap]);
+
   // Initialize physics once on mount
   useEffect(() => {
     // Initialize physics with current dimensions
@@ -93,13 +99,13 @@ export function GameApp() {
     let lastFrameTime = performance.now(); // For FPS cap
 
     const animate = (currentTime) => {
-      // Continue animation loop (always runs at display refresh rate)
-      animationFrameId.current = requestAnimationFrame(animate);
-
       // FPS cap: Skip this frame if not enough time has passed
-      const minFrameTime = fpsCap ? (1000 / fpsCap) : 0;
-      if (fpsCap && (currentTime - lastFrameTime < minFrameTime)) {
-        return; // Skip this frame entirely - don't update physics or render
+      const currentFpsCap = fpsCapRef.current;
+      const minFrameTime = currentFpsCap ? (1000 / currentFpsCap) : 0;
+      if (currentFpsCap && (currentTime - lastFrameTime < minFrameTime)) {
+        // Schedule next frame but skip work
+        animationFrameId.current = requestAnimationFrame(animate);
+        return;
       }
       lastFrameTime = currentTime;
 
@@ -148,6 +154,9 @@ export function GameApp() {
         fpsCounter.current.frames = 0;
         fpsCounter.current.lastTime = now;
       }
+
+      // Schedule next frame at the end
+      animationFrameId.current = requestAnimationFrame(animate);
     };
 
     animationFrameId.current = requestAnimationFrame(animate);
@@ -179,13 +188,13 @@ export function GameApp() {
         let lastFrameTime = performance.now();
 
         const animate = (currentTime) => {
-          // Continue animation loop (always runs at display refresh rate)
-          animationFrameId.current = requestAnimationFrame(animate);
-
           // FPS cap: Skip this frame if not enough time has passed
-          const minFrameTime = fpsCap ? (1000 / fpsCap) : 0;
-          if (fpsCap && (currentTime - lastFrameTime < minFrameTime)) {
-            return; // Skip this frame entirely
+          const currentFpsCap = fpsCapRef.current;
+          const minFrameTime = currentFpsCap ? (1000 / currentFpsCap) : 0;
+          if (currentFpsCap && (currentTime - lastFrameTime < minFrameTime)) {
+            // Schedule next frame but skip work
+            animationFrameId.current = requestAnimationFrame(animate);
+            return;
           }
           lastFrameTime = currentTime;
 
@@ -223,6 +232,9 @@ export function GameApp() {
             fpsCounter.current.frames = 0;
             fpsCounter.current.lastTime = now;
           }
+
+          // Schedule next frame at the end
+          animationFrameId.current = requestAnimationFrame(animate);
         };
 
         animationFrameId.current = requestAnimationFrame(animate);

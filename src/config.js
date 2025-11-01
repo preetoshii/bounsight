@@ -155,4 +155,9 @@ export const config = {
     previewColor: 'rgba(255, 255, 255, 0.5)',  // Preview line color with transparency
     previewThickness: 2,          // Preview line thickness in pixels (not currently used, uses gelato.thickness)
   },
+
+  // === PERFORMANCE ===
+  performance: {
+    defaultFpsCap: null,          // Default FPS cap for components without their own FPS UI (null = uncapped, or 30/60/etc)
+  },
 };

@@ -15,6 +15,7 @@ export function PreviewMode({ message, isActive, onSave, audioUri, wordTimings, 
   });
 
   // Use shared game loop hook - ensures identical physics to main game
+  // Pass null for fpsCap (uncapped in preview mode)
   const {
     gameCore,
     mascotPos,
@@ -25,7 +26,7 @@ export function PreviewMode({ message, isActive, onSave, audioUri, wordTimings, 
     mascotVelocityY,
     lines,
     setLines,
-  } = useGameLoop(dimensions, message, audioUri, wordTimings, wordAudioSegments);
+  } = useGameLoop(dimensions, message, audioUri, wordTimings, wordAudioSegments, null);
 
   const [currentPath, setCurrentPath] = useState(null);
 
