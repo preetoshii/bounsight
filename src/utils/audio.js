@@ -3,8 +3,9 @@ import { Platform } from 'react-native';
 import { config } from '../config';
 
 // Only import react-native-rich-vibration on native platforms (not web)
+// Uses named exports: { vibrate, hasHaptics, cancelVibration }
 const ReactNativeRichVibration = Platform.OS !== 'web'
-  ? require('react-native-rich-vibration').default
+  ? require('react-native-rich-vibration')
   : null;
 
 // Sound player cache

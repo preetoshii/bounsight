@@ -85,35 +85,36 @@ export const config = {
   },
 
   // === HAPTICS (Mobile vibration feedback) ===
-  // Duration in milliseconds (ms), Intensity 0-255 (lower = softer)
-  // Android: Uses react-native-rich-vibration for amplitude control
-  // iOS: Intensity is ignored, uses system haptic engine
-  // Note: Durations below ~10-20ms may not be perceptible on most hardware
+  // react-native-rich-vibration API:
+  // - Duration: minimum 100ms (library enforces this, rejects lower values)
+  // - Intensity: 0-100 scale (library converts to 0-255 for Android internally)
+  // Android: Library scales intensity to 0-255 for native VibrationEffect
+  // iOS: Uses normalized 0-1.0 scale, sharpness parameter available
   haptics: {
     gelatoCreation: {
-      durationMs: 20,        // Vibration duration (20ms = very short tick)
-      intensity: 50,         // Vibration strength 0-255 (50 = very soft)
+      durationMs: 100,       // Vibration duration (100ms minimum enforced by library)
+      intensity: 50,         // Vibration strength 0-100 (50 = medium, library scales to 127/255)
     },
     gelatoBounce: {
-      durationMs: 20,
-      intensity: 50,
+      durationMs: 100,
+      intensity: 30,         // Softer for frequent bounces
     },
     wallBump: {
-      durationMs: 20,
-      intensity: 50,
+      durationMs: 100,
+      intensity: 40,
     },
     loss: {
-      durationMs: 20,
-      intensity: 50,
+      durationMs: 200,       // Longer for dramatic effect
+      intensity: 80,         // Stronger for emphasis
     },
 
     // Drawing haptics (pencil-on-paper effect while dragging)
     drawing: {
       enabled: true,          // Enable/disable drawing haptics
-      durationMs: 20,         // Vibration duration in milliseconds (20ms = subtle tick)
-      intensity: 50,          // Vibration strength 0-255 (50 = very soft, like app switcher)
+      durationMs: 100,        // Vibration duration (100ms minimum)
+      intensity: 20,          // Very soft for subtle pencil-on-paper feel
       pixelsPerTick: 30,      // Distance in pixels between each haptic tick (higher = less frequent)
-      minIntervalMs: 50,      // Minimum time between haptic ticks in milliseconds (prevents overlap when moving fast)
+      minIntervalMs: 120,     // Minimum time between haptic ticks (must be > durationMs to avoid overlap)
     },
   },
 
