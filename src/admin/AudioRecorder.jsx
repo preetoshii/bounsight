@@ -4,7 +4,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withRepeat, withSequence, w
 import { Feather } from '@expo/vector-icons';
 import { useAudioRecorder, useAudioRecorderState, RecordingPresets, useAudioPlayer } from 'expo-audio';
 import { startRecording, stopRecording, formatDuration } from '../services/audioRecordingService';
-import { transcribeAudio } from '../services/googleSpeechService';
+import { getWordTimestamps } from '../services/wordTimestampsService';
 
 /**
  * AudioRecorder Component
@@ -103,10 +103,10 @@ export function AudioRecorder({ onRecordingComplete }) {
     setIsTranscribing(true);
 
     try {
-      // Call Google Speech-to-Text API
-      const result = await transcribeAudio(recordedUri, sentenceBreaks);
+      // Call word-timestamps API for precise word boundaries
+      const result = await getWordTimestamps(recordedUri, sentenceBreaks);
 
-      console.log('Transcription successful!');
+      console.log('Word timestamps retrieved successfully!');
       console.log('Result:', result);
 
       // Notify parent with transcription result
@@ -205,8 +205,8 @@ export function AudioRecorder({ onRecordingComplete }) {
         </View>
       ) : (
         // Recording/Idle mode
-        <View style={styles.buttonsRow}>
-          {/* Sentence Break button (left) - only visible when recording */}
+        <View style={styles.recordingContainer}>
+          {/* Sentence Break button (left) - positioned absolutely */}
           <Animated.View style={[styles.breakButtonContainer, breakButtonStyle]} pointerEvents={state.isRecording ? 'auto' : 'none'}>
             <TouchableOpacity
               style={styles.breakButton}
@@ -260,16 +260,17 @@ const styles = StyleSheet.create({
     padding: 20,
   },
 
-  // Row container for both buttons
-  buttonsRow: {
-    flexDirection: 'row',
+  // Recording container - allows absolute positioning
+  recordingContainer: {
+    position: 'relative',
     alignItems: 'center',
-    gap: 24,
+    justifyContent: 'center',
   },
 
-  // Sentence Break button container
+  // Sentence Break button container - positioned absolutely to the left
   breakButtonContainer: {
-    // Animation controlled by breakButtonStyle
+    position: 'absolute',
+    left: -130, // Position to the left of the main button (100px width + 30px gap)
   },
   breakButton: {
     backgroundColor: '#444',

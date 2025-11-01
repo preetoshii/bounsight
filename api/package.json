@@ -1,0 +1,15 @@
+{
+  "name": "bounsight-api",
+  "version": "1.0.0",
+  "description": "Serverless API for word timestamp alignment",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "ffmpeg-static": "^5.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@vercel/node": "^3.0.0",
+    "typescript": "^5.0.0"
+  }
+}
