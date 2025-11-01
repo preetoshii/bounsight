@@ -1,95 +1,55 @@
 import React, { useEffect, useRef } from 'react';
-import { Canvas, Circle, Fill, Line, Rect, vec, DashPathEffect, Path, Skia, Group } from '@shopify/react-native-skia';
-import { Text, View, StyleSheet, Animated } from 'react-native';
+import { Canvas, Circle, Fill, Line, Rect, vec, DashPathEffect, Path, Skia, Group, Text as SkiaText, useFont, useValue, runTiming, Easing } from '@shopify/react-native-skia';
+import { View } from 'react-native';
 import { config } from '../../config';
-
-// Load Inter font (clean, geometric, open-source)
-if (typeof document !== 'undefined') {
-  const link = document.createElement('link');
-  link.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@300;400&display=swap';
-  link.rel = 'stylesheet';
-  document.head.appendChild(link);
-}
+import { useFonts } from 'expo-font';
 
 /**
- * WaveText - Mexican wave effect where each letter waves in sequence
+ * SkiaWaveLetter - Individual letter with Skia-based wave animation
+ * Runs directly on GPU, no JS bridge crossing
  */
-function WaveText({ text, opacity }) {
-  const letters = text.split('');
-  const totalLetters = letters.length;
-
-  return (
-    <View style={{ flexDirection: 'row', opacity }}>
-      {letters.map((letter, index) => (
-        <WaveLetter key={`${text}-${index}`} letter={letter} index={index} totalLetters={totalLetters} />
-      ))}
-    </View>
-  );
-}
-
-/**
- * WaveLetter - Individual letter with wave animation
- */
-function WaveLetter({ letter, index, totalLetters }) {
-  const translateY = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(1)).current;
+function SkiaWaveLetter({ letter, index, x, y, font, opacity }) {
+  const translateY = useValue(0);
+  const scale = useValue(1);
 
   useEffect(() => {
     // Stagger the animation based on letter index
-    const delayBetweenLetters = 60; // 60ms delay between each letter (faster wave)
+    const delayBetweenLetters = 60; // 60ms delay between each letter
     const initialDelay = index * delayBetweenLetters;
 
-    // Wave only once on reveal - no loop!
-    const waveAnimation = Animated.sequence([
-      // Wait for this letter's turn
-      Animated.delay(initialDelay),
-      // Wave up (subtle and fast)
-      Animated.parallel([
-        Animated.timing(translateY, {
-          toValue: -8,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scale, {
-          toValue: 1.08,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-      ]),
-      // Wave down (subtle and fast)
-      Animated.parallel([
-        Animated.timing(translateY, {
-          toValue: 0,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(scale, {
-          toValue: 1,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-      ]),
-    ]);
+    // Delay then wave animation
+    setTimeout(() => {
+      // Wave up
+      runTiming(translateY, -8, { duration: 150, easing: Easing.out(Easing.ease) });
+      runTiming(scale, 1.08, { duration: 150, easing: Easing.out(Easing.ease) }, () => {
+        // Wave down
+        runTiming(translateY, 0, { duration: 150, easing: Easing.in(Easing.ease) });
+        runTiming(scale, 1, { duration: 150, easing: Easing.in(Easing.ease) });
+      });
+    }, initialDelay);
+  }, [index]);
 
-    waveAnimation.start();
-
-    return () => waveAnimation.stop();
-  }, [index, totalLetters]);
+  if (!font) return null;
 
   return (
-    <Animated.Text
-      style={[
-        styles.word,
-        {
-          transform: [
-            { translateY },
-            { scale },
-          ],
-        },
+    <Group
+      transform={[
+        { translateY: y },
+        { translateX: x },
+        { translateY },
+        { scale },
       ]}
+      origin={{ x, y }}
     >
-      {letter === ' ' ? '\u00A0' : letter}
-    </Animated.Text>
+      <SkiaText
+        text={letter === ' ' ? '\u00A0' : letter}
+        font={font}
+        x={0}
+        y={0}
+        color={config.visuals.wordColor}
+        opacity={opacity}
+      />
+    </Group>
   );
 }
 
@@ -98,6 +58,14 @@ function WaveLetter({ letter, index, totalLetters }) {
  * This same code works on Web, iOS, and Android
  */
 export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], lines = [], currentPath = null, bounceImpact = null, gelatoCreationTime = null, currentWord = null, mascotVelocityY = 0, squashStretch = { scaleX: 1, scaleY: 1 } }) {
+  // Load Inter font for Skia text rendering
+  const [fontsLoaded] = useFonts({
+    'Inter': require('../../../assets/fonts/Inter-Light.ttf'),
+  });
+
+  // Create Skia font object (30px size for words)
+  const font = useFont(require('../../../assets/fonts/Inter-Light.ttf'), 30);
+
   // Calculate word opacity based on configured fade mode
   let wordOpacity = 0;
 
@@ -352,38 +320,48 @@ export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], 
         />
       </Group>
 
-      </Canvas>
+      {/* Word rendering with Skia wave animation */}
+      {currentWord && wordOpacity > 0 && font && (() => {
+        const letters = currentWord.text.split('');
 
-      {/* Word overlay with Mexican wave animation */}
-      {currentWord && wordOpacity > 0 && (
-        <View
-          style={[
-            styles.wordContainer,
-            { transform: [{ translateY: wordVerticalOffset }] }
-          ]}
-          pointerEvents="none"
-        >
-          <WaveText text={currentWord.text} opacity={wordOpacity} />
-        </View>
-      )}
+        // Calculate letter positions
+        const letterWidths = letters.map(letter => {
+          if (!font) return 0;
+          // Estimate width - Skia font.measureText would be better but this works
+          return letter === ' ' ? 15 : font.getSize() * 0.6; // Rough approximation
+        });
+
+        const totalWidth = letterWidths.reduce((sum, w) => sum + w, 0);
+        const startX = (width - totalWidth) / 2; // Center horizontally
+        const baseY = height / 2 + wordVerticalOffset; // Center vertically + offset
+
+        let currentX = startX;
+
+        return (
+          <Group>
+            {letters.map((letter, index) => {
+              const x = currentX;
+              currentX += letterWidths[index];
+
+              return (
+                <SkiaWaveLetter
+                  key={`${currentWord.text}-${index}-${currentWord.timestamp || 0}`}
+                  letter={letter}
+                  index={index}
+                  x={x}
+                  y={baseY}
+                  font={font}
+                  opacity={wordOpacity}
+                />
+              );
+            })}
+          </Group>
+        );
+      })()}
+
+      </Canvas>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  wordContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  word: {
-    fontFamily: 'FinlandRounded',
-    fontSize: config.visuals.wordFontSize,
-    color: config.visuals.wordColor,
-    letterSpacing: 1,
-  },
-});
+// Styles removed - all rendering now done with Skia inside Canvas

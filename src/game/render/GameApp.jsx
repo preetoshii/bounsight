@@ -54,6 +54,10 @@ export function GameApp() {
   const accumulator = useRef(0);
   const FIXED_TIMESTEP = 16.667; // 60 Hz physics updates (1000ms / 60 = 16.667ms)
 
+  // FPS monitoring (DEV ONLY)
+  const fpsCounter = useRef({ frames: 0, lastTime: performance.now() });
+  const [fps, setFps] = useState(60);
+
   // Initialize physics once on mount
   useEffect(() => {
     // Initialize physics with current dimensions
@@ -99,6 +103,15 @@ export function GameApp() {
 
       // Force re-render (at display refresh rate for smooth visuals)
       forceUpdate(n => n + 1);
+
+      // FPS monitoring
+      fpsCounter.current.frames++;
+      const now = performance.now();
+      if (now >= fpsCounter.current.lastTime + 1000) {
+        setFps(Math.round((fpsCounter.current.frames * 1000) / (now - fpsCounter.current.lastTime)));
+        fpsCounter.current.frames = 0;
+        fpsCounter.current.lastTime = now;
+      }
 
       // Continue animation loop
       animationFrameId.current = requestAnimationFrame(animate);
@@ -157,6 +170,16 @@ export function GameApp() {
           }
 
           forceUpdate(n => n + 1);
+
+          // FPS monitoring
+          fpsCounter.current.frames++;
+          const now = performance.now();
+          if (now >= fpsCounter.current.lastTime + 1000) {
+            setFps(Math.round((fpsCounter.current.frames * 1000) / (now - fpsCounter.current.lastTime)));
+            fpsCounter.current.frames = 0;
+            fpsCounter.current.lastTime = now;
+          }
+
           animationFrameId.current = requestAnimationFrame(animate);
         };
 
@@ -306,6 +329,11 @@ export function GameApp() {
           <Pressable onPress={openAdmin} style={styles.adminButton}>
             <Feather name="feather" size={20} color="#ffffff" style={{ opacity: 0.6 }} />
           </Pressable>
+
+          {/* FPS Counter (DEV ONLY) */}
+          <View style={styles.fpsCounter}>
+            <Text style={styles.fpsText}>{fps} FPS</Text>
+          </View>
         </View>
       )}
 
@@ -344,5 +372,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1000,
+  },
+  fpsCounter: {
+    position: 'absolute',
+    top: 50,
+    left: 50,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    zIndex: 1000,
+  },
+  fpsText: {
+    fontFamily: 'monospace',
+    fontSize: 14,
+    color: '#00ff00',
+    fontWeight: 'bold',
   },
 });
