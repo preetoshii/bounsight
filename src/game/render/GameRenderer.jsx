@@ -2,7 +2,6 @@ import React, { useEffect, useRef } from 'react';
 import { Canvas, Circle, Fill, Line, Rect, vec, DashPathEffect, Path, Skia, Group, Text as SkiaText, useFont, useValue, runTiming, Easing } from '@shopify/react-native-skia';
 import { View } from 'react-native';
 import { config } from '../../config';
-import { useFonts } from 'expo-font';
 
 /**
  * SkiaWaveLetter - Individual letter with Skia-based wave animation
@@ -57,14 +56,22 @@ function SkiaWaveLetter({ letter, index, x, y, font, opacity }) {
  * GameRenderer - Unified Skia renderer for all platforms
  * This same code works on Web, iOS, and Android
  */
-export function GameRenderer({ width, height, mascotX, mascotY, obstacles = [], lines = [], currentPath = null, bounceImpact = null, gelatoCreationTime = null, currentWord = null, mascotVelocityY = 0, squashStretch = { scaleX: 1, scaleY: 1 } }) {
-  // Load Inter font for Skia text rendering
-  const [fontsLoaded] = useFonts({
-    'Inter': require('../../../assets/fonts/Inter-Light.ttf'),
-  });
-
-  // Create Skia font object (30px size for words)
-  const font = useFont(require('../../../assets/fonts/Inter-Light.ttf'), 30);
+export function GameRenderer({
+  width,
+  height,
+  mascotX,
+  mascotY,
+  obstacles = [],
+  lines = [],
+  currentPath = null,
+  bounceImpact = null,
+  gelatoCreationTime = null,
+  currentWord = null,
+  mascotVelocityY = 0,
+  squashStretch = { scaleX: 1, scaleY: 1 }
+}) {
+  // Load Inter font with Skia's useFont hook
+  const font = useFont(require('../../../assets/fonts/Inter-Light.ttf'), config.visuals.wordFontSize);
 
   // Calculate word opacity based on configured fade mode
   let wordOpacity = 0;
