@@ -1,5 +1,5 @@
 import { createAudioPlayer } from 'expo-audio';
-import { Vibration } from 'react-native';
+import ReactNativeRichVibration from 'react-native-rich-vibration';
 import { config } from '../config';
 
 // Sound player cache
@@ -55,19 +55,31 @@ export async function playSound(name) {
       player.play();
     }
 
-    // Trigger haptic feedback for key game events using React Native Vibration API
+    // Trigger haptic feedback for key game events using react-native-rich-vibration
     try {
       // Use runtime config if available (from haptics debug menu), otherwise use default
       const runtimeConfig = global.runtimeHapticsConfig || config.haptics;
 
       if (name === 'gelato-create') {
-        Vibration.vibrate(runtimeConfig.gelatoCreation);
+        ReactNativeRichVibration.vibrate(
+          runtimeConfig.gelatoCreation.durationMs,
+          runtimeConfig.gelatoCreation.intensity
+        );
       } else if (name === 'gelato-bounce') {
-        Vibration.vibrate(runtimeConfig.gelatoBounce);
+        ReactNativeRichVibration.vibrate(
+          runtimeConfig.gelatoBounce.durationMs,
+          runtimeConfig.gelatoBounce.intensity
+        );
       } else if (name === 'wall-bump') {
-        Vibration.vibrate(runtimeConfig.wallBump);
+        ReactNativeRichVibration.vibrate(
+          runtimeConfig.wallBump.durationMs,
+          runtimeConfig.wallBump.intensity
+        );
       } else if (name === 'loss') {
-        Vibration.vibrate(runtimeConfig.loss);
+        ReactNativeRichVibration.vibrate(
+          runtimeConfig.loss.durationMs,
+          runtimeConfig.loss.intensity
+        );
       }
     } catch (error) {
       // Silently fail haptics (not supported on all devices)

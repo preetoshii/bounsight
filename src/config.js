@@ -85,18 +85,32 @@ export const config = {
   },
 
   // === HAPTICS (Mobile vibration feedback) ===
-  // All values are in milliseconds (ms) for vibration duration
-  // Lower values = lighter/more subtle haptic feedback
+  // Duration in milliseconds (ms), Intensity 0-255 (lower = softer)
+  // Android: Uses react-native-rich-vibration for amplitude control
+  // iOS: Intensity is ignored, uses system haptic engine
   haptics: {
-    gelatoCreation: 1,       // Haptic when you finish drawing a gelato (10ms = light)
-    gelatoBounce: 1,         // Haptic when ball bounces off gelato (20ms = medium)
-    wallBump: 1,              // Haptic when ball hits walls (5ms = very light)
-    loss: 1,                 // Haptic when you lose (50ms = heavy)
+    gelatoCreation: {
+      durationMs: 1,         // Vibration duration (1ms = ultra-short)
+      intensity: 50,         // Vibration strength 0-255 (50 = very soft)
+    },
+    gelatoBounce: {
+      durationMs: 1,
+      intensity: 50,
+    },
+    wallBump: {
+      durationMs: 1,
+      intensity: 50,
+    },
+    loss: {
+      durationMs: 1,
+      intensity: 50,
+    },
 
     // Drawing haptics (pencil-on-paper effect while dragging)
     drawing: {
       enabled: true,          // Enable/disable drawing haptics
-      vibrationMs: 1,         // Vibration duration in milliseconds (1ms = ultra-subtle, like app switcher)
+      durationMs: 1,          // Vibration duration in milliseconds
+      intensity: 50,          // Vibration strength 0-255 (50 = very soft, like app switcher)
       pixelsPerTick: 30,      // Distance in pixels between each haptic tick (higher = less frequent)
       minIntervalMs: 50,      // Minimum time between haptic ticks in milliseconds (prevents overlap when moving fast)
     },

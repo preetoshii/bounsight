@@ -70,7 +70,7 @@ export function GameApp() {
     gelatoBounce: config.haptics.gelatoBounce,
     wallBump: config.haptics.wallBump,
     loss: config.haptics.loss,
-    drawingVibration: config.haptics.drawing.vibrationMs,
+    drawing: config.haptics.drawing,
   });
 
   // Update global runtime config when haptics change (for audio.js to use)
@@ -303,11 +303,14 @@ export function GameApp() {
       // Trigger haptic only if BOTH distance and time thresholds are met
       if (distance >= config.haptics.drawing.pixelsPerTick &&
           timeSinceLastHaptic >= config.haptics.drawing.minIntervalMs) {
-        // Trigger ultra-subtle haptic for drawing feedback using native Vibration API
-        // This mimics Android's CLOCK_TICK constant used for scrolling/texture feedback
+        // Trigger ultra-subtle haptic for drawing feedback using react-native-rich-vibration
+        // This provides amplitude control for softer haptic feedback
         try {
-          const { Vibration } = await import('react-native');
-          Vibration.vibrate(hapticsConfig.drawingVibration);
+          const ReactNativeRichVibration = await import('react-native-rich-vibration');
+          ReactNativeRichVibration.default.vibrate(
+            hapticsConfig.drawing.durationMs,
+            hapticsConfig.drawing.intensity
+          );
         } catch (error) {
           // Silently fail if haptics not available
         }
@@ -434,95 +437,125 @@ export function GameApp() {
             <View style={[styles.fpsMenu, { top: 90 }]}>
               {/* Drawing Haptic */}
               <View style={styles.hapticControl}>
-                <Text style={styles.hapticLabel}>Drawing: {hapticsConfig.drawingVibration}ms</Text>
+                <Text style={styles.hapticLabel}>Drawing: {hapticsConfig.drawing.durationMs}ms / {hapticsConfig.drawing.intensity}</Text>
                 <View style={styles.hapticButtons}>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, drawingVibration: Math.max(1, hapticsConfig.drawingVibration - 1)})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>-</Text>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, drawing: {...hapticsConfig.drawing, durationMs: Math.max(1, hapticsConfig.drawing.durationMs - 1)}})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>-ms</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, drawing: {...hapticsConfig.drawing, intensity: Math.max(1, hapticsConfig.drawing.intensity - 10)}})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>-pow</Text>
                   </Pressable>
                   <Pressable onPress={() => {
-                    const { Vibration } = require('react-native');
-                    Vibration.vibrate(hapticsConfig.drawingVibration);
+                    const ReactNativeRichVibration = require('react-native-rich-vibration').default;
+                    ReactNativeRichVibration.vibrate(hapticsConfig.drawing.durationMs, hapticsConfig.drawing.intensity);
                   }} style={styles.hapticTestBtn}>
                     <Text style={styles.hapticBtnText}>Test</Text>
                   </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, drawingVibration: hapticsConfig.drawingVibration + 1})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>+</Text>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, drawing: {...hapticsConfig.drawing, intensity: Math.min(255, hapticsConfig.drawing.intensity + 10)}})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>+pow</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, drawing: {...hapticsConfig.drawing, durationMs: hapticsConfig.drawing.durationMs + 1}})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>+ms</Text>
                   </Pressable>
                 </View>
               </View>
 
               {/* Gelato Creation Haptic */}
               <View style={styles.hapticControl}>
-                <Text style={styles.hapticLabel}>Gelato Create: {hapticsConfig.gelatoCreation}ms</Text>
+                <Text style={styles.hapticLabel}>Gelato Create: {hapticsConfig.gelatoCreation.durationMs}ms / {hapticsConfig.gelatoCreation.intensity}</Text>
                 <View style={styles.hapticButtons}>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoCreation: Math.max(1, hapticsConfig.gelatoCreation - 1)})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>-</Text>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoCreation: {...hapticsConfig.gelatoCreation, durationMs: Math.max(1, hapticsConfig.gelatoCreation.durationMs - 1)}})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>-ms</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoCreation: {...hapticsConfig.gelatoCreation, intensity: Math.max(1, hapticsConfig.gelatoCreation.intensity - 10)}})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>-pow</Text>
                   </Pressable>
                   <Pressable onPress={() => {
-                    const { Vibration } = require('react-native');
-                    Vibration.vibrate(hapticsConfig.gelatoCreation);
+                    const ReactNativeRichVibration = require('react-native-rich-vibration').default;
+                    ReactNativeRichVibration.vibrate(hapticsConfig.gelatoCreation.durationMs, hapticsConfig.gelatoCreation.intensity);
                   }} style={styles.hapticTestBtn}>
                     <Text style={styles.hapticBtnText}>Test</Text>
                   </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoCreation: hapticsConfig.gelatoCreation + 1})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>+</Text>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoCreation: {...hapticsConfig.gelatoCreation, intensity: Math.min(255, hapticsConfig.gelatoCreation.intensity + 10)}})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>+pow</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoCreation: {...hapticsConfig.gelatoCreation, durationMs: hapticsConfig.gelatoCreation.durationMs + 1}})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>+ms</Text>
                   </Pressable>
                 </View>
               </View>
 
               {/* Gelato Bounce Haptic */}
               <View style={styles.hapticControl}>
-                <Text style={styles.hapticLabel}>Gelato Bounce: {hapticsConfig.gelatoBounce}ms</Text>
+                <Text style={styles.hapticLabel}>Gelato Bounce: {hapticsConfig.gelatoBounce.durationMs}ms / {hapticsConfig.gelatoBounce.intensity}</Text>
                 <View style={styles.hapticButtons}>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoBounce: Math.max(1, hapticsConfig.gelatoBounce - 1)})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>-</Text>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoBounce: {...hapticsConfig.gelatoBounce, durationMs: Math.max(1, hapticsConfig.gelatoBounce.durationMs - 1)}})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>-ms</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoBounce: {...hapticsConfig.gelatoBounce, intensity: Math.max(1, hapticsConfig.gelatoBounce.intensity - 10)}})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>-pow</Text>
                   </Pressable>
                   <Pressable onPress={() => {
-                    const { Vibration } = require('react-native');
-                    Vibration.vibrate(hapticsConfig.gelatoBounce);
+                    const ReactNativeRichVibration = require('react-native-rich-vibration').default;
+                    ReactNativeRichVibration.vibrate(hapticsConfig.gelatoBounce.durationMs, hapticsConfig.gelatoBounce.intensity);
                   }} style={styles.hapticTestBtn}>
                     <Text style={styles.hapticBtnText}>Test</Text>
                   </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoBounce: hapticsConfig.gelatoBounce + 1})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>+</Text>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoBounce: {...hapticsConfig.gelatoBounce, intensity: Math.min(255, hapticsConfig.gelatoBounce.intensity + 10)}})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>+pow</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoBounce: {...hapticsConfig.gelatoBounce, durationMs: hapticsConfig.gelatoBounce.durationMs + 1}})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>+ms</Text>
                   </Pressable>
                 </View>
               </View>
 
               {/* Wall Bump Haptic */}
               <View style={styles.hapticControl}>
-                <Text style={styles.hapticLabel}>Wall Bump: {hapticsConfig.wallBump}ms</Text>
+                <Text style={styles.hapticLabel}>Wall Bump: {hapticsConfig.wallBump.durationMs}ms / {hapticsConfig.wallBump.intensity}</Text>
                 <View style={styles.hapticButtons}>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, wallBump: Math.max(1, hapticsConfig.wallBump - 1)})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>-</Text>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, wallBump: {...hapticsConfig.wallBump, durationMs: Math.max(1, hapticsConfig.wallBump.durationMs - 1)}})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>-ms</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, wallBump: {...hapticsConfig.wallBump, intensity: Math.max(1, hapticsConfig.wallBump.intensity - 10)}})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>-pow</Text>
                   </Pressable>
                   <Pressable onPress={() => {
-                    const { Vibration } = require('react-native');
-                    Vibration.vibrate(hapticsConfig.wallBump);
+                    const ReactNativeRichVibration = require('react-native-rich-vibration').default;
+                    ReactNativeRichVibration.vibrate(hapticsConfig.wallBump.durationMs, hapticsConfig.wallBump.intensity);
                   }} style={styles.hapticTestBtn}>
                     <Text style={styles.hapticBtnText}>Test</Text>
                   </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, wallBump: hapticsConfig.wallBump + 1})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>+</Text>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, wallBump: {...hapticsConfig.wallBump, intensity: Math.min(255, hapticsConfig.wallBump.intensity + 10)}})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>+pow</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, wallBump: {...hapticsConfig.wallBump, durationMs: hapticsConfig.wallBump.durationMs + 1}})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>+ms</Text>
                   </Pressable>
                 </View>
               </View>
 
               {/* Loss Haptic */}
               <View style={styles.hapticControl}>
-                <Text style={styles.hapticLabel}>Loss: {hapticsConfig.loss}ms</Text>
+                <Text style={styles.hapticLabel}>Loss: {hapticsConfig.loss.durationMs}ms / {hapticsConfig.loss.intensity}</Text>
                 <View style={styles.hapticButtons}>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, loss: Math.max(1, hapticsConfig.loss - 1)})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>-</Text>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, loss: {...hapticsConfig.loss, durationMs: Math.max(1, hapticsConfig.loss.durationMs - 1)}})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>-ms</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, loss: {...hapticsConfig.loss, intensity: Math.max(1, hapticsConfig.loss.intensity - 10)}})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>-pow</Text>
                   </Pressable>
                   <Pressable onPress={() => {
-                    const { Vibration } = require('react-native');
-                    Vibration.vibrate(hapticsConfig.loss);
+                    const ReactNativeRichVibration = require('react-native-rich-vibration').default;
+                    ReactNativeRichVibration.vibrate(hapticsConfig.loss.durationMs, hapticsConfig.loss.intensity);
                   }} style={styles.hapticTestBtn}>
                     <Text style={styles.hapticBtnText}>Test</Text>
                   </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, loss: hapticsConfig.loss + 1})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>+</Text>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, loss: {...hapticsConfig.loss, intensity: Math.min(255, hapticsConfig.loss.intensity + 10)}})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>+pow</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, loss: {...hapticsConfig.loss, durationMs: hapticsConfig.loss.durationMs + 1}})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>+ms</Text>
                   </Pressable>
                 </View>
               </View>
