@@ -1,4 +1,6 @@
 import { createAudioPlayer } from 'expo-audio';
+import { Vibration } from 'react-native';
+import { config } from '../config';
 
 // Sound player cache
 const soundPlayers = {};
@@ -22,7 +24,7 @@ function loadSound(name, source, volume = 1.0) {
   }
 }
 
-// Play a sound by name
+// Play a sound by name with optional haptic feedback
 export async function playSound(name) {
   try {
     const soundMap = {
@@ -51,6 +53,24 @@ export async function playSound(name) {
       // Replay from beginning
       player.seekTo(0);
       player.play();
+    }
+
+    // Trigger haptic feedback for key game events using React Native Vibration API
+    try {
+      // Use runtime config if available (from haptics debug menu), otherwise use default
+      const runtimeConfig = global.runtimeHapticsConfig || config.haptics;
+
+      if (name === 'gelato-create') {
+        Vibration.vibrate(runtimeConfig.gelatoCreation);
+      } else if (name === 'gelato-bounce') {
+        Vibration.vibrate(runtimeConfig.gelatoBounce);
+      } else if (name === 'wall-bump') {
+        Vibration.vibrate(runtimeConfig.wallBump);
+      } else if (name === 'loss') {
+        Vibration.vibrate(runtimeConfig.loss);
+      }
+    } catch (error) {
+      // Silently fail haptics (not supported on all devices)
     }
   } catch (error) {
     console.warn(`Failed to play sound ${name}:`, error);

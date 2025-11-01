@@ -85,10 +85,21 @@ export const config = {
   },
 
   // === HAPTICS (Mobile vibration feedback) ===
+  // All values are in milliseconds (ms) for vibration duration
+  // Lower values = lighter/more subtle haptic feedback
   haptics: {
-    gelatoPlaced: 'light',    // Haptic feedback when drawing/placing a Gelato ('light', 'medium', 'heavy')
-    bounce: 'medium',         // Haptic feedback on bounce/word reveal
-    combo: 'success',         // Haptic for combo achievements (future feature)
+    gelatoCreation: 1,       // Haptic when you finish drawing a gelato (10ms = light)
+    gelatoBounce: 1,         // Haptic when ball bounces off gelato (20ms = medium)
+    wallBump: 1,              // Haptic when ball hits walls (5ms = very light)
+    loss: 1,                 // Haptic when you lose (50ms = heavy)
+
+    // Drawing haptics (pencil-on-paper effect while dragging)
+    drawing: {
+      enabled: true,          // Enable/disable drawing haptics
+      vibrationMs: 1,         // Vibration duration in milliseconds (1ms = ultra-subtle, like app switcher)
+      pixelsPerTick: 30,      // Distance in pixels between each haptic tick (higher = less frequent)
+      minIntervalMs: 50,      // Minimum time between haptic ticks in milliseconds (prevents overlap when moving fast)
+    },
   },
 
   // === AUDIO (Not yet implemented) ===
@@ -100,7 +111,7 @@ export const config = {
 
   // === VISUALS ===
   visuals: {
-    backgroundColor: '#0a0a0a',   // Canvas background color (dark mode)
+    backgroundColor: '#000000',   // Canvas background color (pure black)
     wordColor: '#FFFFFF',         // Text color for revealed words
     wordFontSize: 145,            // Font size for revealed words in pixels
 

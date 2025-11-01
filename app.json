@@ -17,6 +17,7 @@
       "bundleIdentifier": "com.anonymous.bounsight-app"
     },
     "android": {
+      "package": "com.preetoshi.bounsight",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"

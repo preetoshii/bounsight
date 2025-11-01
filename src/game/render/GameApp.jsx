@@ -55,8 +55,28 @@ export function GameApp() {
   const FIXED_TIMESTEP = 16.667; // 60 Hz physics updates (1000ms / 60 = 16.667ms)
 
   // FPS monitoring (DEV ONLY)
-  const fpsCounter = useRef({ frames: 0, lastTime: performance.now() });
+  const fpsCounter = useRef({ frames: 0, lastTime: performance.now(), lastRenderTime: 0 });
   const [fps, setFps] = useState(60);
+
+  // FPS cap control (DEV ONLY)
+  const [fpsCap, setFpsCap] = useState(null); // null = uncapped, or 10-120
+  const fpsCapOptions = [null, 10, 20, 30, 40, 50, 60, 70, 80, 90, 120];
+  const [showFpsMenu, setShowFpsMenu] = useState(false);
+
+  // Haptics debug menu (DEV ONLY)
+  const [showHapticsMenu, setShowHapticsMenu] = useState(false);
+  const [hapticsConfig, setHapticsConfig] = useState({
+    gelatoCreation: config.haptics.gelatoCreation,
+    gelatoBounce: config.haptics.gelatoBounce,
+    wallBump: config.haptics.wallBump,
+    loss: config.haptics.loss,
+    drawingVibration: config.haptics.drawing.vibrationMs,
+  });
+
+  // Update global runtime config when haptics change (for audio.js to use)
+  useEffect(() => {
+    global.runtimeHapticsConfig = hapticsConfig;
+  }, [hapticsConfig]);
 
   // Initialize physics once on mount
   useEffect(() => {
@@ -64,8 +84,19 @@ export function GameApp() {
     gameCore.current = new GameCore(dimensions.width, dimensions.height);
 
     let lastTime = performance.now();
+    let lastFrameTime = performance.now(); // For FPS cap
 
     const animate = (currentTime) => {
+      // Continue animation loop (always runs at display refresh rate)
+      animationFrameId.current = requestAnimationFrame(animate);
+
+      // FPS cap: Skip this frame if not enough time has passed
+      const minFrameTime = fpsCap ? (1000 / fpsCap) : 0;
+      if (fpsCap && (currentTime - lastFrameTime < minFrameTime)) {
+        return; // Skip this frame entirely - don't update physics or render
+      }
+      lastFrameTime = currentTime;
+
       const deltaTime = currentTime - lastTime;
       lastTime = currentTime;
 
@@ -101,10 +132,9 @@ export function GameApp() {
         setLines(currentGelatoData ? [currentGelatoData] : []);
       }
 
-      // Force re-render (at display refresh rate for smooth visuals)
+      // Force re-render and monitor FPS
       forceUpdate(n => n + 1);
 
-      // FPS monitoring
       fpsCounter.current.frames++;
       const now = performance.now();
       if (now >= fpsCounter.current.lastTime + 1000) {
@@ -112,9 +142,6 @@ export function GameApp() {
         fpsCounter.current.frames = 0;
         fpsCounter.current.lastTime = now;
       }
-
-      // Continue animation loop
-      animationFrameId.current = requestAnimationFrame(animate);
     };
 
     animationFrameId.current = requestAnimationFrame(animate);
@@ -143,8 +170,19 @@ export function GameApp() {
       // Resume animation loop when admin closes (if not already running)
       if (!animationFrameId.current && gameCore.current) {
         let lastTime = performance.now();
+        let lastFrameTime = performance.now();
 
         const animate = (currentTime) => {
+          // Continue animation loop (always runs at display refresh rate)
+          animationFrameId.current = requestAnimationFrame(animate);
+
+          // FPS cap: Skip this frame if not enough time has passed
+          const minFrameTime = fpsCap ? (1000 / fpsCap) : 0;
+          if (fpsCap && (currentTime - lastFrameTime < minFrameTime)) {
+            return; // Skip this frame entirely
+          }
+          lastFrameTime = currentTime;
+
           const deltaTime = currentTime - lastTime;
           lastTime = currentTime;
 
@@ -169,9 +207,9 @@ export function GameApp() {
             setLines(currentGelatoData ? [currentGelatoData] : []);
           }
 
+          // Force re-render and monitor FPS
           forceUpdate(n => n + 1);
 
-          // FPS monitoring
           fpsCounter.current.frames++;
           const now = performance.now();
           if (now >= fpsCounter.current.lastTime + 1000) {
@@ -179,8 +217,6 @@ export function GameApp() {
             fpsCounter.current.frames = 0;
             fpsCounter.current.lastTime = now;
           }
-
-          animationFrameId.current = requestAnimationFrame(animate);
         };
 
         animationFrameId.current = requestAnimationFrame(animate);
@@ -232,14 +268,20 @@ export function GameApp() {
     return trimmedPoints;
   };
 
+  // Track last haptic position and time for drawing feedback
+  const lastHapticPos = useRef(null);
+  const lastHapticTime = useRef(0);
+
   // Touch handlers for drawing lines
   const handleTouchStart = (event) => {
     const touch = event.nativeEvent.touches?.[0] || event.nativeEvent;
     console.log('🎨 Touch start:', touch.pageX, touch.pageY);
     setCurrentPath([{ x: touch.pageX, y: touch.pageY }]);
+    lastHapticPos.current = { x: touch.pageX, y: touch.pageY };
+    lastHapticTime.current = Date.now();
   };
 
-  const handleTouchMove = (event) => {
+  const handleTouchMove = async (event) => {
     if (!currentPath) return;
     const touch = event.nativeEvent.touches?.[0] || event.nativeEvent;
 
@@ -250,6 +292,29 @@ export function GameApp() {
     const trimmedPath = trimPathToMaxLength(newPath, config.gelato.maxLength);
 
     setCurrentPath(trimmedPath);
+
+    // Trigger haptic feedback based on distance AND time (prevents overlap when moving fast)
+    if (config.haptics.drawing.enabled && lastHapticPos.current) {
+      const dx = touch.pageX - lastHapticPos.current.x;
+      const dy = touch.pageY - lastHapticPos.current.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const timeSinceLastHaptic = Date.now() - lastHapticTime.current;
+
+      // Trigger haptic only if BOTH distance and time thresholds are met
+      if (distance >= config.haptics.drawing.pixelsPerTick &&
+          timeSinceLastHaptic >= config.haptics.drawing.minIntervalMs) {
+        // Trigger ultra-subtle haptic for drawing feedback using native Vibration API
+        // This mimics Android's CLOCK_TICK constant used for scrolling/texture feedback
+        try {
+          const { Vibration } = await import('react-native');
+          Vibration.vibrate(hapticsConfig.drawingVibration);
+        } catch (error) {
+          // Silently fail if haptics not available
+        }
+        lastHapticPos.current = { x: touch.pageX, y: touch.pageY };
+        lastHapticTime.current = Date.now();
+      }
+    }
   };
 
   const handleTouchEnd = () => {
@@ -332,9 +397,137 @@ export function GameApp() {
           </Pressable>
 
           {/* FPS Counter (DEV ONLY) */}
-          <View style={styles.fpsCounter}>
-            <Text style={styles.fpsText}>{fps} FPS</Text>
-          </View>
+          <Pressable onPress={() => setShowFpsMenu(!showFpsMenu)} style={styles.fpsCounter}>
+            <Text style={styles.fpsText}>
+              {fps} FPS {fpsCap ? `(${fpsCap} cap)` : '(uncapped)'} {showFpsMenu ? '▼' : '▶'}
+            </Text>
+          </Pressable>
+
+          {/* FPS Cap Menu */}
+          {showFpsMenu && (
+            <View style={styles.fpsMenu}>
+              {fpsCapOptions.map((cap) => (
+                <Pressable
+                  key={cap || 'uncapped'}
+                  onPress={() => setFpsCap(cap)}
+                  style={[
+                    styles.fpsButton,
+                    fpsCap === cap && styles.fpsButtonActive
+                  ]}
+                >
+                  <Text style={styles.fpsButtonText}>
+                    {cap ? `${cap} FPS` : 'Uncapped'} {fpsCap === cap && '✓'}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+
+          {/* Haptics Debug Menu (DEV ONLY) */}
+          <Pressable onPress={() => setShowHapticsMenu(!showHapticsMenu)} style={[styles.fpsCounter, { top: 60 }]}>
+            <Text style={styles.fpsText}>
+              Haptics {showHapticsMenu ? '▼' : '▶'}
+            </Text>
+          </Pressable>
+
+          {showHapticsMenu && (
+            <View style={[styles.fpsMenu, { top: 90 }]}>
+              {/* Drawing Haptic */}
+              <View style={styles.hapticControl}>
+                <Text style={styles.hapticLabel}>Drawing: {hapticsConfig.drawingVibration}ms</Text>
+                <View style={styles.hapticButtons}>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, drawingVibration: Math.max(1, hapticsConfig.drawingVibration - 1)})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>-</Text>
+                  </Pressable>
+                  <Pressable onPress={() => {
+                    const { Vibration } = require('react-native');
+                    Vibration.vibrate(hapticsConfig.drawingVibration);
+                  }} style={styles.hapticTestBtn}>
+                    <Text style={styles.hapticBtnText}>Test</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, drawingVibration: hapticsConfig.drawingVibration + 1})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>+</Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* Gelato Creation Haptic */}
+              <View style={styles.hapticControl}>
+                <Text style={styles.hapticLabel}>Gelato Create: {hapticsConfig.gelatoCreation}ms</Text>
+                <View style={styles.hapticButtons}>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoCreation: Math.max(1, hapticsConfig.gelatoCreation - 1)})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>-</Text>
+                  </Pressable>
+                  <Pressable onPress={() => {
+                    const { Vibration } = require('react-native');
+                    Vibration.vibrate(hapticsConfig.gelatoCreation);
+                  }} style={styles.hapticTestBtn}>
+                    <Text style={styles.hapticBtnText}>Test</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoCreation: hapticsConfig.gelatoCreation + 1})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>+</Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* Gelato Bounce Haptic */}
+              <View style={styles.hapticControl}>
+                <Text style={styles.hapticLabel}>Gelato Bounce: {hapticsConfig.gelatoBounce}ms</Text>
+                <View style={styles.hapticButtons}>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoBounce: Math.max(1, hapticsConfig.gelatoBounce - 1)})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>-</Text>
+                  </Pressable>
+                  <Pressable onPress={() => {
+                    const { Vibration } = require('react-native');
+                    Vibration.vibrate(hapticsConfig.gelatoBounce);
+                  }} style={styles.hapticTestBtn}>
+                    <Text style={styles.hapticBtnText}>Test</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoBounce: hapticsConfig.gelatoBounce + 1})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>+</Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* Wall Bump Haptic */}
+              <View style={styles.hapticControl}>
+                <Text style={styles.hapticLabel}>Wall Bump: {hapticsConfig.wallBump}ms</Text>
+                <View style={styles.hapticButtons}>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, wallBump: Math.max(1, hapticsConfig.wallBump - 1)})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>-</Text>
+                  </Pressable>
+                  <Pressable onPress={() => {
+                    const { Vibration } = require('react-native');
+                    Vibration.vibrate(hapticsConfig.wallBump);
+                  }} style={styles.hapticTestBtn}>
+                    <Text style={styles.hapticBtnText}>Test</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, wallBump: hapticsConfig.wallBump + 1})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>+</Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* Loss Haptic */}
+              <View style={styles.hapticControl}>
+                <Text style={styles.hapticLabel}>Loss: {hapticsConfig.loss}ms</Text>
+                <View style={styles.hapticButtons}>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, loss: Math.max(1, hapticsConfig.loss - 1)})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>-</Text>
+                  </Pressable>
+                  <Pressable onPress={() => {
+                    const { Vibration } = require('react-native');
+                    Vibration.vibrate(hapticsConfig.loss);
+                  }} style={styles.hapticTestBtn}>
+                    <Text style={styles.hapticBtnText}>Test</Text>
+                  </Pressable>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, loss: hapticsConfig.loss + 1})} style={styles.hapticBtn}>
+                    <Text style={styles.hapticBtnText}>+</Text>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          )}
         </View>
       )}
 
@@ -353,7 +546,7 @@ export function GameApp() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: '#000000',
   },
   fullScreen: {
     position: 'absolute',
@@ -388,6 +581,69 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
     fontSize: 14,
     color: '#00ff00',
+    fontWeight: 'bold',
+  },
+  fpsMenu: {
+    position: 'absolute',
+    top: 90,
+    left: 50,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    borderRadius: 8,
+    padding: 8,
+    zIndex: 1000,
+  },
+  fpsButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 6,
+    marginBottom: 4,
+  },
+  fpsButtonActive: {
+    backgroundColor: 'rgba(0, 255, 0, 0.2)',
+  },
+  fpsButtonText: {
+    fontFamily: 'monospace',
+    fontSize: 12,
+    color: '#ffffff',
+    fontWeight: 'bold',
+  },
+  hapticControl: {
+    marginBottom: 12,
+    padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 6,
+  },
+  hapticLabel: {
+    fontFamily: 'monospace',
+    fontSize: 11,
+    color: '#00ff00',
+    marginBottom: 6,
+    fontWeight: 'bold',
+  },
+  hapticButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 6,
+  },
+  hapticBtn: {
+    flex: 1,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 4,
+    alignItems: 'center',
+  },
+  hapticTestBtn: {
+    flex: 2,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(0, 255, 0, 0.2)',
+    borderRadius: 4,
+    alignItems: 'center',
+  },
+  hapticBtnText: {
+    fontFamily: 'monospace',
+    fontSize: 11,
+    color: '#ffffff',
     fontWeight: 'bold',
   },
 });
