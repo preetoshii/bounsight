@@ -1,6 +1,11 @@
 import { createAudioPlayer } from 'expo-audio';
-import ReactNativeRichVibration from 'react-native-rich-vibration';
+import { Platform } from 'react-native';
 import { config } from '../config';
+
+// Only import react-native-rich-vibration on native platforms (not web)
+const ReactNativeRichVibration = Platform.OS !== 'web'
+  ? require('react-native-rich-vibration').default
+  : null;
 
 // Sound player cache
 const soundPlayers = {};
@@ -55,34 +60,36 @@ export async function playSound(name) {
       player.play();
     }
 
-    // Trigger haptic feedback for key game events using react-native-rich-vibration
-    try {
-      // Use runtime config if available (from haptics debug menu), otherwise use default
-      const runtimeConfig = global.runtimeHapticsConfig || config.haptics;
+    // Trigger haptic feedback for key game events using react-native-rich-vibration (native only)
+    if (ReactNativeRichVibration) {
+      try {
+        // Use runtime config if available (from haptics debug menu), otherwise use default
+        const runtimeConfig = global.runtimeHapticsConfig || config.haptics;
 
-      if (name === 'gelato-create') {
-        ReactNativeRichVibration.vibrate(
-          runtimeConfig.gelatoCreation.durationMs,
-          runtimeConfig.gelatoCreation.intensity
-        );
-      } else if (name === 'gelato-bounce') {
-        ReactNativeRichVibration.vibrate(
-          runtimeConfig.gelatoBounce.durationMs,
-          runtimeConfig.gelatoBounce.intensity
-        );
-      } else if (name === 'wall-bump') {
-        ReactNativeRichVibration.vibrate(
-          runtimeConfig.wallBump.durationMs,
-          runtimeConfig.wallBump.intensity
-        );
-      } else if (name === 'loss') {
-        ReactNativeRichVibration.vibrate(
-          runtimeConfig.loss.durationMs,
-          runtimeConfig.loss.intensity
-        );
+        if (name === 'gelato-create') {
+          ReactNativeRichVibration.vibrate(
+            runtimeConfig.gelatoCreation.durationMs,
+            runtimeConfig.gelatoCreation.intensity
+          );
+        } else if (name === 'gelato-bounce') {
+          ReactNativeRichVibration.vibrate(
+            runtimeConfig.gelatoBounce.durationMs,
+            runtimeConfig.gelatoBounce.intensity
+          );
+        } else if (name === 'wall-bump') {
+          ReactNativeRichVibration.vibrate(
+            runtimeConfig.wallBump.durationMs,
+            runtimeConfig.wallBump.intensity
+          );
+        } else if (name === 'loss') {
+          ReactNativeRichVibration.vibrate(
+            runtimeConfig.loss.durationMs,
+            runtimeConfig.loss.intensity
+          );
+        }
+      } catch (error) {
+        // Silently fail haptics (not supported on all devices)
       }
-    } catch (error) {
-      // Silently fail haptics (not supported on all devices)
     }
   } catch (error) {
     console.warn(`Failed to play sound ${name}:`, error);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, View, Dimensions, Pressable, Text, Animated, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Dimensions, Pressable, Text, Animated, ActivityIndicator, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
 import { GameRenderer } from './GameRenderer';
@@ -9,6 +9,11 @@ import { AdminPortal } from '../../admin/AdminPortal';
 import { playSound } from '../../utils/audio';
 import { fetchMessages } from '../../admin/githubApi';
 import { Button } from '../../components/Button';
+
+// Only import react-native-rich-vibration on native platforms (not web)
+const ReactNativeRichVibration = Platform.OS !== 'web'
+  ? require('react-native-rich-vibration').default
+  : null;
 
 /**
  * GameApp - Main game component
@@ -303,16 +308,17 @@ export function GameApp() {
       // Trigger haptic only if BOTH distance and time thresholds are met
       if (distance >= config.haptics.drawing.pixelsPerTick &&
           timeSinceLastHaptic >= config.haptics.drawing.minIntervalMs) {
-        // Trigger ultra-subtle haptic for drawing feedback using react-native-rich-vibration
+        // Trigger ultra-subtle haptic for drawing feedback using react-native-rich-vibration (native only)
         // This provides amplitude control for softer haptic feedback
-        try {
-          const ReactNativeRichVibration = await import('react-native-rich-vibration');
-          ReactNativeRichVibration.default.vibrate(
-            hapticsConfig.drawing.durationMs,
-            hapticsConfig.drawing.intensity
-          );
-        } catch (error) {
-          // Silently fail if haptics not available
+        if (ReactNativeRichVibration) {
+          try {
+            ReactNativeRichVibration.vibrate(
+              hapticsConfig.drawing.durationMs,
+              hapticsConfig.drawing.intensity
+            );
+          } catch (error) {
+            // Silently fail if haptics not available
+          }
         }
         lastHapticPos.current = { x: touch.pageX, y: touch.pageY };
         lastHapticTime.current = Date.now();
@@ -446,8 +452,9 @@ export function GameApp() {
                     <Text style={styles.hapticBtnText}>-pow</Text>
                   </Pressable>
                   <Pressable onPress={() => {
-                    const ReactNativeRichVibration = require('react-native-rich-vibration').default;
-                    ReactNativeRichVibration.vibrate(hapticsConfig.drawing.durationMs, hapticsConfig.drawing.intensity);
+                    if (ReactNativeRichVibration) {
+                      ReactNativeRichVibration.vibrate(hapticsConfig.drawing.durationMs, hapticsConfig.drawing.intensity);
+                    }
                   }} style={styles.hapticTestBtn}>
                     <Text style={styles.hapticBtnText}>Test</Text>
                   </Pressable>
@@ -471,8 +478,9 @@ export function GameApp() {
                     <Text style={styles.hapticBtnText}>-pow</Text>
                   </Pressable>
                   <Pressable onPress={() => {
-                    const ReactNativeRichVibration = require('react-native-rich-vibration').default;
-                    ReactNativeRichVibration.vibrate(hapticsConfig.gelatoCreation.durationMs, hapticsConfig.gelatoCreation.intensity);
+                    if (ReactNativeRichVibration) {
+                      ReactNativeRichVibration.vibrate(hapticsConfig.gelatoCreation.durationMs, hapticsConfig.gelatoCreation.intensity);
+                    }
                   }} style={styles.hapticTestBtn}>
                     <Text style={styles.hapticBtnText}>Test</Text>
                   </Pressable>
@@ -496,8 +504,9 @@ export function GameApp() {
                     <Text style={styles.hapticBtnText}>-pow</Text>
                   </Pressable>
                   <Pressable onPress={() => {
-                    const ReactNativeRichVibration = require('react-native-rich-vibration').default;
-                    ReactNativeRichVibration.vibrate(hapticsConfig.gelatoBounce.durationMs, hapticsConfig.gelatoBounce.intensity);
+                    if (ReactNativeRichVibration) {
+                      ReactNativeRichVibration.vibrate(hapticsConfig.gelatoBounce.durationMs, hapticsConfig.gelatoBounce.intensity);
+                    }
                   }} style={styles.hapticTestBtn}>
                     <Text style={styles.hapticBtnText}>Test</Text>
                   </Pressable>
@@ -521,8 +530,9 @@ export function GameApp() {
                     <Text style={styles.hapticBtnText}>-pow</Text>
                   </Pressable>
                   <Pressable onPress={() => {
-                    const ReactNativeRichVibration = require('react-native-rich-vibration').default;
-                    ReactNativeRichVibration.vibrate(hapticsConfig.wallBump.durationMs, hapticsConfig.wallBump.intensity);
+                    if (ReactNativeRichVibration) {
+                      ReactNativeRichVibration.vibrate(hapticsConfig.wallBump.durationMs, hapticsConfig.wallBump.intensity);
+                    }
                   }} style={styles.hapticTestBtn}>
                     <Text style={styles.hapticBtnText}>Test</Text>
                   </Pressable>
@@ -546,8 +556,9 @@ export function GameApp() {
                     <Text style={styles.hapticBtnText}>-pow</Text>
                   </Pressable>
                   <Pressable onPress={() => {
-                    const ReactNativeRichVibration = require('react-native-rich-vibration').default;
-                    ReactNativeRichVibration.vibrate(hapticsConfig.loss.durationMs, hapticsConfig.loss.intensity);
+                    if (ReactNativeRichVibration) {
+                      ReactNativeRichVibration.vibrate(hapticsConfig.loss.durationMs, hapticsConfig.loss.intensity);
+                    }
                   }} style={styles.hapticTestBtn}>
                     <Text style={styles.hapticBtnText}>Test</Text>
                   </Pressable>
