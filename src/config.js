@@ -88,28 +88,29 @@ export const config = {
   // Duration in milliseconds (ms), Intensity 0-255 (lower = softer)
   // Android: Uses react-native-rich-vibration for amplitude control
   // iOS: Intensity is ignored, uses system haptic engine
+  // Note: Durations below ~10-20ms may not be perceptible on most hardware
   haptics: {
     gelatoCreation: {
-      durationMs: 1,         // Vibration duration (1ms = ultra-short)
+      durationMs: 20,        // Vibration duration (20ms = very short tick)
       intensity: 50,         // Vibration strength 0-255 (50 = very soft)
     },
     gelatoBounce: {
-      durationMs: 1,
+      durationMs: 20,
       intensity: 50,
     },
     wallBump: {
-      durationMs: 1,
+      durationMs: 20,
       intensity: 50,
     },
     loss: {
-      durationMs: 1,
+      durationMs: 20,
       intensity: 50,
     },
 
     // Drawing haptics (pencil-on-paper effect while dragging)
     drawing: {
       enabled: true,          // Enable/disable drawing haptics
-      durationMs: 1,          // Vibration duration in milliseconds
+      durationMs: 20,         // Vibration duration in milliseconds (20ms = subtle tick)
       intensity: 50,          // Vibration strength 0-255 (50 = very soft, like app switcher)
       pixelsPerTick: 30,      // Distance in pixels between each haptic tick (higher = less frequent)
       minIntervalMs: 50,      // Minimum time between haptic ticks in milliseconds (prevents overlap when moving fast)
