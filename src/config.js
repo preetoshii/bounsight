@@ -85,36 +85,40 @@ export const config = {
   },
 
   // === HAPTICS (Mobile vibration feedback) ===
-  // react-native-rich-vibration API:
-  // - Duration: minimum 100ms (library enforces this, rejects lower values)
-  // - Intensity: 0-100 scale (library converts to 0-255 for Android internally)
-  // Android: Library scales intensity to 0-255 for native VibrationEffect
-  // iOS: Uses normalized 0-1.0 scale, sharpness parameter available
+  // Platform-specific haptic feedback configuration
+  //
+  // Android: Custom expo-custom-haptics module using VibrationEffect.createOneShot()
+  //   - durationMs: any positive number (e.g. 1-1000ms)
+  //   - amplitude: 1-255 (1 = softest, 255 = strongest)
+  //
+  // iOS: expo-haptics with preset impact styles
+  //   - style: 'light' | 'medium' | 'heavy' | 'soft' | 'rigid'
+  //   - iOS ignores Android settings, uses native haptic engine
   haptics: {
     gelatoCreation: {
-      durationMs: 100,       // Vibration duration (100ms minimum enforced by library)
-      intensity: 50,         // Vibration strength 0-100 (50 = medium, library scales to 127/255)
+      android: { durationMs: 20, amplitude: 50 },   // Quick subtle tick
+      ios: 'light',                                  // Light impact
     },
     gelatoBounce: {
-      durationMs: 100,
-      intensity: 30,         // Softer for frequent bounces
+      android: { durationMs: 15, amplitude: 30 },   // Very subtle for frequent bounces
+      ios: 'soft',                                   // Soft impact
     },
     wallBump: {
-      durationMs: 100,
-      intensity: 40,
+      android: { durationMs: 20, amplitude: 40 },   // Medium subtle tick
+      ios: 'light',                                  // Light impact
     },
     loss: {
-      durationMs: 200,       // Longer for dramatic effect
-      intensity: 80,         // Stronger for emphasis
+      android: { durationMs: 50, amplitude: 100 },  // Longer, stronger for emphasis
+      ios: 'heavy',                                  // Strong impact
     },
 
     // Drawing haptics (pencil-on-paper effect while dragging)
     drawing: {
-      enabled: true,          // Enable/disable drawing haptics
-      durationMs: 100,        // Vibration duration (100ms minimum)
-      intensity: 20,          // Very soft for subtle pencil-on-paper feel
-      pixelsPerTick: 30,      // Distance in pixels between each haptic tick (higher = less frequent)
-      minIntervalMs: 120,     // Minimum time between haptic ticks (must be > durationMs to avoid overlap)
+      enabled: true,                                 // Enable/disable drawing haptics
+      android: { durationMs: 10, amplitude: 20 },   // Ultra-subtle quick tick
+      ios: 'soft',                                   // Soft impact
+      pixelsPerTick: 30,                             // Distance between haptic ticks
+      minIntervalMs: 50,                             // Minimum time between ticks (prevents overlap)
     },
   },
 

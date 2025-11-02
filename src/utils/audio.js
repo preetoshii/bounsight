@@ -1,12 +1,6 @@
 import { createAudioPlayer } from 'expo-audio';
-import { Platform } from 'react-native';
 import { config } from '../config';
-
-// Only import react-native-rich-vibration on native platforms (not web)
-// Uses named exports: { vibrate, hasHaptics, cancelVibration }
-const ReactNativeRichVibration = Platform.OS !== 'web'
-  ? require('react-native-rich-vibration')
-  : null;
+import { triggerHaptic } from './haptics';
 
 // Sound player cache
 const soundPlayers = {};
@@ -61,36 +55,20 @@ export async function playSound(name) {
       player.play();
     }
 
-    // Trigger haptic feedback for key game events using react-native-rich-vibration (native only)
-    if (ReactNativeRichVibration) {
-      try {
-        // Use runtime config if available (from haptics debug menu), otherwise use default
-        const runtimeConfig = global.runtimeHapticsConfig || config.haptics;
+    // Trigger haptic feedback for key game events
+    // Use runtime config if available (from haptics debug menu), otherwise use default
+    const runtimeConfig = global.runtimeHapticsConfig;
 
-        if (name === 'gelato-create') {
-          ReactNativeRichVibration.vibrate(
-            runtimeConfig.gelatoCreation.durationMs,
-            runtimeConfig.gelatoCreation.intensity
-          );
-        } else if (name === 'gelato-bounce') {
-          ReactNativeRichVibration.vibrate(
-            runtimeConfig.gelatoBounce.durationMs,
-            runtimeConfig.gelatoBounce.intensity
-          );
-        } else if (name === 'wall-bump') {
-          ReactNativeRichVibration.vibrate(
-            runtimeConfig.wallBump.durationMs,
-            runtimeConfig.wallBump.intensity
-          );
-        } else if (name === 'loss') {
-          ReactNativeRichVibration.vibrate(
-            runtimeConfig.loss.durationMs,
-            runtimeConfig.loss.intensity
-          );
-        }
-      } catch (error) {
-        // Silently fail haptics (not supported on all devices)
-      }
+    const hapticEventMap = {
+      'gelato-create': 'gelatoCreation',
+      'gelato-bounce': 'gelatoBounce',
+      'wall-bump': 'wallBump',
+      'loss': 'loss',
+    };
+
+    const hapticEvent = hapticEventMap[name];
+    if (hapticEvent) {
+      triggerHaptic(hapticEvent, runtimeConfig);
     }
   } catch (error) {
     console.warn(`Failed to play sound ${name}:`, error);

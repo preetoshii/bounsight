@@ -1,0 +1,10 @@
+{
+  "name": "expo-custom-haptics",
+  "version": "1.0.0",
+  "description": "Custom haptics module with full Android amplitude control",
+  "main": "index.ts",
+  "scripts": {},
+  "keywords": ["expo", "haptics", "vibration"],
+  "author": "",
+  "license": "MIT"
+}
