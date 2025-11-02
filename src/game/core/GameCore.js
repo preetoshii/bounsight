@@ -258,24 +258,54 @@ export class GameCore {
 
   /**
    * Update difficulty based on bounce count
-   * Adjusts frictionAir to increase fall speed as player progresses
+   * Uses a single "speed" multiplier that proportionally adjusts gravity and restitution
+   * Higher speed = faster falls (↑ gravity) + lower bounces (↓ restitution) = balanced difficulty
    */
   updateDifficulty() {
     if (!config.difficulty.enabled) {
       return;
     }
 
-    const { start, end, bouncesUntilMax } = config.difficulty.frictionAir;
+    // Safety check: ensure mascot exists
+    if (!this.mascot) {
+      console.warn('updateDifficulty called before mascot created');
+      return;
+    }
 
-    // Linear interpolation between start and end
+    const { start, end, bouncesUntilMax } = config.difficulty.speed;
+    const damping = config.difficulty.restitutionDamping;
+
+    // Calculate current speed multiplier (linear interpolation)
     const progress = Math.min(this.bounceCount / bouncesUntilMax, 1);
-    const newFrictionAir = start - (start - end) * progress;
+    const speedMultiplier = start + (end - start) * progress;
 
-    // Update mascot's frictionAir property
-    Matter.Body.set(this.mascot, { frictionAir: newFrictionAir });
+    // Base values (from config)
+    const baseGravity = config.physics.gravityY;
+    const baseRestitution = config.physics.mascot.restitution;
 
-    // Optional: Log difficulty changes for debugging
-    // console.log(`Bounce ${this.bounceCount}: frictionAir = ${newFrictionAir.toFixed(4)}`);
+    // Apply speed multiplier proportionally
+    const newGravity = baseGravity * speedMultiplier;
+
+    // Apply restitution damping: higher damping = restitution drops faster
+    // damping = 1.0: linear (restitution / speed)
+    // damping < 1.0: gentler (restitution stays higher)
+    // damping > 1.0: more aggressive (restitution drops faster)
+    const newRestitution = baseRestitution / Math.pow(speedMultiplier, damping);
+
+    // Validate values before applying
+    if (isNaN(newGravity) || isNaN(newRestitution)) {
+      console.error('Invalid difficulty values:', { newGravity, newRestitution, speedMultiplier, damping });
+      return;
+    }
+
+    // Update engine's gravity
+    this.engine.gravity.y = newGravity;
+
+    // Update mascot's restitution
+    this.mascot.restitution = newRestitution;
+
+    // Log difficulty changes for debugging
+    console.log(`Bounce ${this.bounceCount}: speed = ${speedMultiplier.toFixed(2)}x (gravity = ${newGravity.toFixed(2)}, restitution = ${newRestitution.toFixed(2)})`);
   }
 
   /**

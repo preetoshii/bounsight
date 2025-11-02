@@ -47,20 +47,31 @@ export const config = {
   difficulty: {
     enabled: true,            // Toggle difficulty ramping on/off
 
-    // Friction air progression (controls fall speed)
-    frictionAir: {
-      start: 0.005,           // Starting air resistance (easy - slower falls)
-      end: 0.0005,            // Ending air resistance (hard - faster falls)
-      bouncesUntilMax: 30,    // Number of bounces to reach maximum difficulty
+    // Single "speed" parameter that controls both gravity and restitution proportionally
+    // Higher speed = higher gravity (faster falls) + lower restitution (lower bounces)
+    // This keeps the game balanced - faster falls but less hang time
+    speed: {
+      start: 1.0,            // Starting speed multiplier (1.0 = default physics)
+      end: 10.0,              // Ending speed multiplier (2.0 = 2x faster gameplay)
+      bouncesUntilMax: 50,   // Number of bounces to reach maximum difficulty
     },
 
-    // Formula: Linear interpolation between start and end
-    // frictionAir = start - ((start - end) * (bounces / bouncesUntilMax))
-    // Example with defaults:
-    //   Bounce 0:  frictionAir = 0.005
-    //   Bounce 10: frictionAir = 0.0035
-    //   Bounce 20: frictionAir = 0.002
-    //   Bounce 30+: frictionAir = 0.0005 (max difficulty)
+    // Restitution damping: controls how aggressively bounce height decreases with speed
+    // Higher values = restitution drops faster = lower bounces = more intense difficulty curve
+    // Lower values = restitution stays higher = more forgiving = gentler difficulty curve
+    restitutionDamping: 5,  // 1.0 = linear (restitution = base / speed)
+                              // 0.5 = gentle (restitution drops slower)
+                              // 1.5 = aggressive (restitution drops faster)
+
+    // Internal formulas:
+    // gravity = baseGravity * speed
+    // restitution = baseRestitution / (speed ^ restitutionDamping)
+    //
+    // Example progression (restitutionDamping = 1.0):
+    //   Bounce 0:  speed = 1.0  →  gravity = 1.0,  restitution = 0.60 (baseline)
+    //   Bounce 7:  speed = 1.35 →  gravity = 1.35, restitution = 0.44 (getting faster)
+    //   Bounce 13: speed = 1.65 →  gravity = 1.65, restitution = 0.36 (intense)
+    //   Bounce 20+: speed = 2.0  →  gravity = 2.0,  restitution = 0.30 (max speed)
   },
 
   // === GELATO (SPRINGBOARDS) ===
