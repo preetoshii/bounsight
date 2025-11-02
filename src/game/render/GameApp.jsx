@@ -9,12 +9,7 @@ import { AdminPortal } from '../../admin/AdminPortal';
 import { playSound } from '../../utils/audio';
 import { fetchMessages } from '../../admin/githubApi';
 import { Button } from '../../components/Button';
-
-// Only import react-native-rich-vibration on native platforms (not web)
-// Uses named exports: { vibrate, hasHaptics, cancelVibration }
-const ReactNativeRichVibration = Platform.OS !== 'web'
-  ? require('react-native-rich-vibration')
-  : null;
+import { triggerDrawingHaptic, triggerHaptic } from '../../utils/haptics';
 
 /**
  * GameApp - Main game component
@@ -321,18 +316,9 @@ export function GameApp() {
       // Trigger haptic only if BOTH distance and time thresholds are met
       if (distance >= config.haptics.drawing.pixelsPerTick &&
           timeSinceLastHaptic >= config.haptics.drawing.minIntervalMs) {
-        // Trigger ultra-subtle haptic for drawing feedback using react-native-rich-vibration (native only)
-        // This provides amplitude control for softer haptic feedback
-        if (ReactNativeRichVibration) {
-          try {
-            ReactNativeRichVibration.vibrate(
-              hapticsConfig.drawing.durationMs,
-              hapticsConfig.drawing.intensity
-            );
-          } catch (error) {
-            // Silently fail if haptics not available
-          }
-        }
+        // Trigger ultra-subtle haptic for drawing feedback
+        // Uses platform-specific haptics (Android: custom module, iOS: expo-haptics)
+        triggerDrawingHaptic(hapticsConfig);
         lastHapticPos.current = { x: touch.pageX, y: touch.pageY };
         lastHapticTime.current = Date.now();
       }
@@ -456,25 +442,21 @@ export function GameApp() {
             <View style={[styles.fpsMenu, { top: 90 }]}>
               {/* Drawing Haptic */}
               <View style={styles.hapticControl}>
-                <Text style={styles.hapticLabel}>Drawing: {hapticsConfig.drawing.durationMs}ms / {hapticsConfig.drawing.intensity}</Text>
+                <Text style={styles.hapticLabel}>Drawing: {hapticsConfig.drawing.android?.durationMs || 10}ms / {hapticsConfig.drawing.android?.amplitude || 20}</Text>
                 <View style={styles.hapticButtons}>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, drawing: {...hapticsConfig.drawing, durationMs: Math.max(100, hapticsConfig.drawing.durationMs - 100)}})} style={styles.hapticBtn}>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, drawing: {...hapticsConfig.drawing, android: {...hapticsConfig.drawing.android, durationMs: Math.max(1, hapticsConfig.drawing.android.durationMs - 5)}}})} style={styles.hapticBtn}>
                     <Text style={styles.hapticBtnText}>-ms</Text>
                   </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, drawing: {...hapticsConfig.drawing, intensity: Math.max(1, hapticsConfig.drawing.intensity - 10)}})} style={styles.hapticBtn}>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, drawing: {...hapticsConfig.drawing, android: {...hapticsConfig.drawing.android, amplitude: Math.max(1, hapticsConfig.drawing.android.amplitude - 10)}}})} style={styles.hapticBtn}>
                     <Text style={styles.hapticBtnText}>-pow</Text>
                   </Pressable>
-                  <Pressable onPress={() => {
-                    if (ReactNativeRichVibration) {
-                      ReactNativeRichVibration.vibrate(hapticsConfig.drawing.durationMs, hapticsConfig.drawing.intensity);
-                    }
-                  }} style={styles.hapticTestBtn}>
+                  <Pressable onPress={() => triggerHaptic('drawing', hapticsConfig)} style={styles.hapticTestBtn}>
                     <Text style={styles.hapticBtnText}>Test</Text>
                   </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, drawing: {...hapticsConfig.drawing, intensity: Math.min(100, hapticsConfig.drawing.intensity + 10)}})} style={styles.hapticBtn}>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, drawing: {...hapticsConfig.drawing, android: {...hapticsConfig.drawing.android, amplitude: Math.min(255, hapticsConfig.drawing.android.amplitude + 10)}}})} style={styles.hapticBtn}>
                     <Text style={styles.hapticBtnText}>+pow</Text>
                   </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, drawing: {...hapticsConfig.drawing, durationMs: hapticsConfig.drawing.durationMs + 10}})} style={styles.hapticBtn}>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, drawing: {...hapticsConfig.drawing, android: {...hapticsConfig.drawing.android, durationMs: hapticsConfig.drawing.android.durationMs + 5}}})} style={styles.hapticBtn}>
                     <Text style={styles.hapticBtnText}>+ms</Text>
                   </Pressable>
                 </View>
@@ -482,25 +464,21 @@ export function GameApp() {
 
               {/* Gelato Creation Haptic */}
               <View style={styles.hapticControl}>
-                <Text style={styles.hapticLabel}>Gelato Create: {hapticsConfig.gelatoCreation.durationMs}ms / {hapticsConfig.gelatoCreation.intensity}</Text>
+                <Text style={styles.hapticLabel}>Gelato Create: {hapticsConfig.gelatoCreation.android?.durationMs || 20}ms / {hapticsConfig.gelatoCreation.android?.amplitude || 50}</Text>
                 <View style={styles.hapticButtons}>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoCreation: {...hapticsConfig.gelatoCreation, durationMs: Math.max(100, hapticsConfig.gelatoCreation.durationMs - 10)}})} style={styles.hapticBtn}>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoCreation: {...hapticsConfig.gelatoCreation, android: {...hapticsConfig.gelatoCreation.android, durationMs: Math.max(1, hapticsConfig.gelatoCreation.android.durationMs - 5)}}})} style={styles.hapticBtn}>
                     <Text style={styles.hapticBtnText}>-ms</Text>
                   </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoCreation: {...hapticsConfig.gelatoCreation, intensity: Math.max(1, hapticsConfig.gelatoCreation.intensity - 10)}})} style={styles.hapticBtn}>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoCreation: {...hapticsConfig.gelatoCreation, android: {...hapticsConfig.gelatoCreation.android, amplitude: Math.max(1, hapticsConfig.gelatoCreation.android.amplitude - 10)}}})} style={styles.hapticBtn}>
                     <Text style={styles.hapticBtnText}>-pow</Text>
                   </Pressable>
-                  <Pressable onPress={() => {
-                    if (ReactNativeRichVibration) {
-                      ReactNativeRichVibration.vibrate(hapticsConfig.gelatoCreation.durationMs, hapticsConfig.gelatoCreation.intensity);
-                    }
-                  }} style={styles.hapticTestBtn}>
+                  <Pressable onPress={() => triggerHaptic('gelatoCreation', hapticsConfig)} style={styles.hapticTestBtn}>
                     <Text style={styles.hapticBtnText}>Test</Text>
                   </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoCreation: {...hapticsConfig.gelatoCreation, intensity: Math.min(100, hapticsConfig.gelatoCreation.intensity + 10)}})} style={styles.hapticBtn}>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoCreation: {...hapticsConfig.gelatoCreation, android: {...hapticsConfig.gelatoCreation.android, amplitude: Math.min(255, hapticsConfig.gelatoCreation.android.amplitude + 10)}}})} style={styles.hapticBtn}>
                     <Text style={styles.hapticBtnText}>+pow</Text>
                   </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoCreation: {...hapticsConfig.gelatoCreation, durationMs: hapticsConfig.gelatoCreation.durationMs + 10}})} style={styles.hapticBtn}>
+                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoCreation: {...hapticsConfig.gelatoCreation, android: {...hapticsConfig.gelatoCreation.android, durationMs: hapticsConfig.gelatoCreation.android.durationMs + 5}}})} style={styles.hapticBtn}>
                     <Text style={styles.hapticBtnText}>+ms</Text>
                   </Pressable>
                 </View>
@@ -516,11 +494,7 @@ export function GameApp() {
                   <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoBounce: {...hapticsConfig.gelatoBounce, intensity: Math.max(1, hapticsConfig.gelatoBounce.intensity - 10)}})} style={styles.hapticBtn}>
                     <Text style={styles.hapticBtnText}>-pow</Text>
                   </Pressable>
-                  <Pressable onPress={() => {
-                    if (ReactNativeRichVibration) {
-                      ReactNativeRichVibration.vibrate(hapticsConfig.gelatoBounce.durationMs, hapticsConfig.gelatoBounce.intensity);
-                    }
-                  }} style={styles.hapticTestBtn}>
+                  <Pressable onPress={() => triggerHaptic('gelatoBounce', hapticsConfig)} style={styles.hapticTestBtn}>
                     <Text style={styles.hapticBtnText}>Test</Text>
                   </Pressable>
                   <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoBounce: {...hapticsConfig.gelatoBounce, intensity: Math.min(100, hapticsConfig.gelatoBounce.intensity + 10)}})} style={styles.hapticBtn}>
@@ -542,11 +516,7 @@ export function GameApp() {
                   <Pressable onPress={() => setHapticsConfig({...hapticsConfig, wallBump: {...hapticsConfig.wallBump, intensity: Math.max(1, hapticsConfig.wallBump.intensity - 10)}})} style={styles.hapticBtn}>
                     <Text style={styles.hapticBtnText}>-pow</Text>
                   </Pressable>
-                  <Pressable onPress={() => {
-                    if (ReactNativeRichVibration) {
-                      ReactNativeRichVibration.vibrate(hapticsConfig.wallBump.durationMs, hapticsConfig.wallBump.intensity);
-                    }
-                  }} style={styles.hapticTestBtn}>
+                  <Pressable onPress={() => triggerHaptic('wallBump', hapticsConfig)} style={styles.hapticTestBtn}>
                     <Text style={styles.hapticBtnText}>Test</Text>
                   </Pressable>
                   <Pressable onPress={() => setHapticsConfig({...hapticsConfig, wallBump: {...hapticsConfig.wallBump, intensity: Math.min(100, hapticsConfig.wallBump.intensity + 10)}})} style={styles.hapticBtn}>
@@ -568,11 +538,7 @@ export function GameApp() {
                   <Pressable onPress={() => setHapticsConfig({...hapticsConfig, loss: {...hapticsConfig.loss, intensity: Math.max(1, hapticsConfig.loss.intensity - 10)}})} style={styles.hapticBtn}>
                     <Text style={styles.hapticBtnText}>-pow</Text>
                   </Pressable>
-                  <Pressable onPress={() => {
-                    if (ReactNativeRichVibration) {
-                      ReactNativeRichVibration.vibrate(hapticsConfig.loss.durationMs, hapticsConfig.loss.intensity);
-                    }
-                  }} style={styles.hapticTestBtn}>
+                  <Pressable onPress={() => triggerHaptic('loss', hapticsConfig)} style={styles.hapticTestBtn}>
                     <Text style={styles.hapticBtnText}>Test</Text>
                   </Pressable>
                   <Pressable onPress={() => setHapticsConfig({...hapticsConfig, loss: {...hapticsConfig.loss, intensity: Math.min(100, hapticsConfig.loss.intensity + 10)}})} style={styles.hapticBtn}>

@@ -30,6 +30,18 @@
     "plugins": [
       "expo-audio",
       "expo-font"
+    ],
+    "experiments": {
+      "baseUrl": "/",
+      "typedRoutes": false
+    },
+    "_internal": {
+      "pluginHistory": {}
+    }
+  },
+  "expo-module": {
+    "searchPaths": [
+      "./modules"
     ]
   }
 }

@@ -1,12 +1,13 @@
-import { Platform } from 'react-native';
+import { Platform, NativeModules } from 'react-native';
 import * as ExpoHaptics from 'expo-haptics';
-import * as CustomHaptics from '../../modules/expo-custom-haptics';
 import { config } from '../config';
+
+const { CustomHaptics } = NativeModules;
 
 /**
  * Unified haptics API that routes to the appropriate platform implementation
  *
- * Android: Uses custom expo-custom-haptics module for precise duration + amplitude control
+ * Android: Uses CustomHaptics native module with full duration + amplitude control (1-1000ms, 1-255)
  * iOS: Uses expo-haptics with native haptic engine (preset impact styles)
  * Web: No-op (haptics not supported)
  */
@@ -48,10 +49,10 @@ export function triggerHaptic(eventName, runtimeConfig = null) {
     }
 
     if (Platform.OS === 'android') {
-      // Android: Use custom module with duration + amplitude
+      // Android: Use CustomHaptics native module with duration + amplitude control
       const { durationMs, amplitude } = eventConfig.android || eventConfig;
 
-      if (durationMs !== undefined && amplitude !== undefined) {
+      if (CustomHaptics && durationMs !== undefined && amplitude !== undefined) {
         CustomHaptics.vibrate(durationMs, amplitude);
       }
     } else if (Platform.OS === 'ios') {
