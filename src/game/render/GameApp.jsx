@@ -10,6 +10,7 @@ import { playSound } from '../../utils/audio';
 import { fetchMessages } from '../../admin/githubApi';
 import { Button } from '../../components/Button';
 import { triggerDrawingHaptic, triggerHaptic } from '../../utils/haptics';
+import { DebugMenu } from '../../components/DebugMenu';
 
 /**
  * GameApp - Main game component
@@ -62,11 +63,9 @@ export function GameApp() {
   // FPS cap control (DEV ONLY)
   const [fpsCap, setFpsCap] = useState(null); // null = uncapped, or 10-120
   const fpsCapRef = useRef(fpsCap); // Use ref to avoid remounting effect
-  const fpsCapOptions = [null, 10, 20, 30, 40, 50, 60, 70, 80, 90, 120];
-  const [showFpsMenu, setShowFpsMenu] = useState(false);
 
-  // Haptics debug menu (DEV ONLY)
-  const [showHapticsMenu, setShowHapticsMenu] = useState(false);
+  // Debug menu (DEV ONLY)
+  const [showDebugMenu, setShowDebugMenu] = useState(false);
   const [hapticsConfig, setHapticsConfig] = useState({
     gelatoCreation: config.haptics.gelatoCreation,
     gelatoBounce: config.haptics.gelatoBounce,
@@ -404,153 +403,22 @@ export function GameApp() {
             <Feather name="feather" size={20} color="#ffffff" style={{ opacity: 0.6 }} />
           </Pressable>
 
-          {/* FPS Counter (DEV ONLY) */}
-          <Pressable onPress={() => setShowFpsMenu(!showFpsMenu)} style={styles.fpsCounter}>
-            <Text style={styles.fpsText}>
-              {fps} FPS {fpsCap ? `(${fpsCap} cap)` : '(uncapped)'} {showFpsMenu ? '▼' : '▶'}
+          {/* FPS Counter + Debug Button (DEV ONLY) */}
+          <Pressable onPress={() => setShowDebugMenu(true)} style={styles.debugButton}>
+            <Text style={styles.debugButtonText}>
+              ⚙️ {fps} FPS
             </Text>
           </Pressable>
 
-          {/* FPS Cap Menu */}
-          {showFpsMenu && (
-            <View style={styles.fpsMenu}>
-              {fpsCapOptions.map((cap) => (
-                <Pressable
-                  key={cap || 'uncapped'}
-                  onPress={() => setFpsCap(cap)}
-                  style={[
-                    styles.fpsButton,
-                    fpsCap === cap && styles.fpsButtonActive
-                  ]}
-                >
-                  <Text style={styles.fpsButtonText}>
-                    {cap ? `${cap} FPS` : 'Uncapped'} {fpsCap === cap && '✓'}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          )}
-
-          {/* Haptics Debug Menu (DEV ONLY) */}
-          <Pressable onPress={() => setShowHapticsMenu(!showHapticsMenu)} style={[styles.fpsCounter, { top: 60 }]}>
-            <Text style={styles.fpsText}>
-              Haptics {showHapticsMenu ? '▼' : '▶'}
-            </Text>
-          </Pressable>
-
-          {showHapticsMenu && (
-            <View style={[styles.fpsMenu, { top: 90 }]}>
-              {/* Drawing Haptic */}
-              <View style={styles.hapticControl}>
-                <Text style={styles.hapticLabel}>Drawing: {hapticsConfig.drawing.android?.durationMs || 10}ms / {hapticsConfig.drawing.android?.amplitude || 20}</Text>
-                <View style={styles.hapticButtons}>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, drawing: {...hapticsConfig.drawing, android: {...hapticsConfig.drawing.android, durationMs: Math.max(1, hapticsConfig.drawing.android.durationMs - 5)}}})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>-ms</Text>
-                  </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, drawing: {...hapticsConfig.drawing, android: {...hapticsConfig.drawing.android, amplitude: Math.max(1, hapticsConfig.drawing.android.amplitude - 10)}}})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>-pow</Text>
-                  </Pressable>
-                  <Pressable onPress={() => triggerHaptic('drawing', hapticsConfig)} style={styles.hapticTestBtn}>
-                    <Text style={styles.hapticBtnText}>Test</Text>
-                  </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, drawing: {...hapticsConfig.drawing, android: {...hapticsConfig.drawing.android, amplitude: Math.min(255, hapticsConfig.drawing.android.amplitude + 10)}}})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>+pow</Text>
-                  </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, drawing: {...hapticsConfig.drawing, android: {...hapticsConfig.drawing.android, durationMs: hapticsConfig.drawing.android.durationMs + 5}}})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>+ms</Text>
-                  </Pressable>
-                </View>
-              </View>
-
-              {/* Gelato Creation Haptic */}
-              <View style={styles.hapticControl}>
-                <Text style={styles.hapticLabel}>Gelato Create: {hapticsConfig.gelatoCreation.android?.durationMs || 20}ms / {hapticsConfig.gelatoCreation.android?.amplitude || 50}</Text>
-                <View style={styles.hapticButtons}>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoCreation: {...hapticsConfig.gelatoCreation, android: {...hapticsConfig.gelatoCreation.android, durationMs: Math.max(1, hapticsConfig.gelatoCreation.android.durationMs - 5)}}})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>-ms</Text>
-                  </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoCreation: {...hapticsConfig.gelatoCreation, android: {...hapticsConfig.gelatoCreation.android, amplitude: Math.max(1, hapticsConfig.gelatoCreation.android.amplitude - 10)}}})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>-pow</Text>
-                  </Pressable>
-                  <Pressable onPress={() => triggerHaptic('gelatoCreation', hapticsConfig)} style={styles.hapticTestBtn}>
-                    <Text style={styles.hapticBtnText}>Test</Text>
-                  </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoCreation: {...hapticsConfig.gelatoCreation, android: {...hapticsConfig.gelatoCreation.android, amplitude: Math.min(255, hapticsConfig.gelatoCreation.android.amplitude + 10)}}})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>+pow</Text>
-                  </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoCreation: {...hapticsConfig.gelatoCreation, android: {...hapticsConfig.gelatoCreation.android, durationMs: hapticsConfig.gelatoCreation.android.durationMs + 5}}})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>+ms</Text>
-                  </Pressable>
-                </View>
-              </View>
-
-              {/* Gelato Bounce Haptic */}
-              <View style={styles.hapticControl}>
-                <Text style={styles.hapticLabel}>Gelato Bounce: {hapticsConfig.gelatoBounce.durationMs}ms / {hapticsConfig.gelatoBounce.intensity}</Text>
-                <View style={styles.hapticButtons}>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoBounce: {...hapticsConfig.gelatoBounce, durationMs: Math.max(100, hapticsConfig.gelatoBounce.durationMs - 10)}})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>-ms</Text>
-                  </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoBounce: {...hapticsConfig.gelatoBounce, intensity: Math.max(1, hapticsConfig.gelatoBounce.intensity - 10)}})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>-pow</Text>
-                  </Pressable>
-                  <Pressable onPress={() => triggerHaptic('gelatoBounce', hapticsConfig)} style={styles.hapticTestBtn}>
-                    <Text style={styles.hapticBtnText}>Test</Text>
-                  </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoBounce: {...hapticsConfig.gelatoBounce, intensity: Math.min(100, hapticsConfig.gelatoBounce.intensity + 10)}})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>+pow</Text>
-                  </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, gelatoBounce: {...hapticsConfig.gelatoBounce, durationMs: hapticsConfig.gelatoBounce.durationMs + 10}})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>+ms</Text>
-                  </Pressable>
-                </View>
-              </View>
-
-              {/* Wall Bump Haptic */}
-              <View style={styles.hapticControl}>
-                <Text style={styles.hapticLabel}>Wall Bump: {hapticsConfig.wallBump.durationMs}ms / {hapticsConfig.wallBump.intensity}</Text>
-                <View style={styles.hapticButtons}>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, wallBump: {...hapticsConfig.wallBump, durationMs: Math.max(100, hapticsConfig.wallBump.durationMs - 10)}})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>-ms</Text>
-                  </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, wallBump: {...hapticsConfig.wallBump, intensity: Math.max(1, hapticsConfig.wallBump.intensity - 10)}})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>-pow</Text>
-                  </Pressable>
-                  <Pressable onPress={() => triggerHaptic('wallBump', hapticsConfig)} style={styles.hapticTestBtn}>
-                    <Text style={styles.hapticBtnText}>Test</Text>
-                  </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, wallBump: {...hapticsConfig.wallBump, intensity: Math.min(100, hapticsConfig.wallBump.intensity + 10)}})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>+pow</Text>
-                  </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, wallBump: {...hapticsConfig.wallBump, durationMs: hapticsConfig.wallBump.durationMs + 10}})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>+ms</Text>
-                  </Pressable>
-                </View>
-              </View>
-
-              {/* Loss Haptic */}
-              <View style={styles.hapticControl}>
-                <Text style={styles.hapticLabel}>Loss: {hapticsConfig.loss.durationMs}ms / {hapticsConfig.loss.intensity}</Text>
-                <View style={styles.hapticButtons}>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, loss: {...hapticsConfig.loss, durationMs: Math.max(100, hapticsConfig.loss.durationMs - 10)}})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>-ms</Text>
-                  </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, loss: {...hapticsConfig.loss, intensity: Math.max(1, hapticsConfig.loss.intensity - 10)}})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>-pow</Text>
-                  </Pressable>
-                  <Pressable onPress={() => triggerHaptic('loss', hapticsConfig)} style={styles.hapticTestBtn}>
-                    <Text style={styles.hapticBtnText}>Test</Text>
-                  </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, loss: {...hapticsConfig.loss, intensity: Math.min(100, hapticsConfig.loss.intensity + 10)}})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>+pow</Text>
-                  </Pressable>
-                  <Pressable onPress={() => setHapticsConfig({...hapticsConfig, loss: {...hapticsConfig.loss, durationMs: hapticsConfig.loss.durationMs + 10}})} style={styles.hapticBtn}>
-                    <Text style={styles.hapticBtnText}>+ms</Text>
-                  </Pressable>
-                </View>
-              </View>
-            </View>
-          )}
+          {/* Debug Menu Overlay */}
+          <DebugMenu
+            visible={showDebugMenu}
+            onClose={() => setShowDebugMenu(false)}
+            hapticsConfig={hapticsConfig}
+            setHapticsConfig={setHapticsConfig}
+            fpsCap={fpsCap}
+            setFpsCap={setFpsCap}
+          />
         </View>
       )}
 
@@ -601,6 +469,22 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   fpsText: {
+    fontFamily: 'monospace',
+    fontSize: 14,
+    color: '#00ff00',
+    fontWeight: 'bold',
+  },
+  debugButton: {
+    position: 'absolute',
+    top: 50,
+    left: 50,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    zIndex: 1000,
+  },
+  debugButtonText: {
     fontFamily: 'monospace',
     fontSize: 14,
     color: '#00ff00',
