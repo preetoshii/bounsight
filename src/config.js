@@ -43,6 +43,26 @@ export const config = {
     maxVelocityY: 50,         // Maximum vertical velocity in pixels/frame
   },
 
+  // === DIFFICULTY PROGRESSION ===
+  difficulty: {
+    enabled: true,            // Toggle difficulty ramping on/off
+
+    // Friction air progression (controls fall speed)
+    frictionAir: {
+      start: 0.005,           // Starting air resistance (easy - slower falls)
+      end: 0.0005,            // Ending air resistance (hard - faster falls)
+      bouncesUntilMax: 30,    // Number of bounces to reach maximum difficulty
+    },
+
+    // Formula: Linear interpolation between start and end
+    // frictionAir = start - ((start - end) * (bounces / bouncesUntilMax))
+    // Example with defaults:
+    //   Bounce 0:  frictionAir = 0.005
+    //   Bounce 10: frictionAir = 0.0035
+    //   Bounce 20: frictionAir = 0.002
+    //   Bounce 30+: frictionAir = 0.0005 (max difficulty)
+  },
+
   // === GELATO (SPRINGBOARDS) ===
   gelato: {
     maxLength: 230,           // Maximum line length in pixels (enforced during drawing)
@@ -96,28 +116,27 @@ export const config = {
   //   - iOS ignores Android settings, uses native haptic engine
   haptics: {
     gelatoCreation: {
-      android: { durationMs: 20, amplitude: 50 },   // Quick subtle tick
+      android: { durationMs: 0, amplitude: 0},   // Quick subtle tick
       ios: 'light',                                  // Light impact
     },
     gelatoBounce: {
-      android: { durationMs: 15, amplitude: 30 },   // Very subtle for frequent bounces
+      android: { durationMs: 5, amplitude: 40 },   // Very subtle for frequent bounces
       ios: 'soft',                                   // Soft impact
     },
     wallBump: {
-      android: { durationMs: 20, amplitude: 40 },   // Medium subtle tick
+      android: { durationMs: 0, amplitude: 0 },   // Medium subtle tick
       ios: 'light',                                  // Light impact
     },
     loss: {
       android: { durationMs: 50, amplitude: 100 },  // Longer, stronger for emphasis
-      ios: 'heavy',                                  // Strong impact
     },
 
     // Drawing haptics (pencil-on-paper effect while dragging)
     drawing: {
       enabled: true,                                 // Enable/disable drawing haptics
-      android: { durationMs: 10, amplitude: 20 },   // Ultra-subtle quick tick
+      android: { durationMs: 1, amplitude: 20 },   // Ultra-subtle quick tick
       ios: 'soft',                                   // Soft impact
-      pixelsPerTick: 30,                             // Distance between haptic ticks
+      pixelsPerTick: 20,                             // Distance between haptic ticks
       minIntervalMs: 50,                             // Minimum time between ticks (prevents overlap)
     },
   },

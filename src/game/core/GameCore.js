@@ -72,6 +72,9 @@ export class GameCore {
     // Track loss state
     this.hasLost = false;
 
+    // Track bounce count for difficulty progression
+    this.bounceCount = 0;
+
     // Create boundary walls using config
     const wallThickness = config.walls.thickness;
     const halfThickness = wallThickness / 2;
@@ -254,6 +257,28 @@ export class GameCore {
   }
 
   /**
+   * Update difficulty based on bounce count
+   * Adjusts frictionAir to increase fall speed as player progresses
+   */
+  updateDifficulty() {
+    if (!config.difficulty.enabled) {
+      return;
+    }
+
+    const { start, end, bouncesUntilMax } = config.difficulty.frictionAir;
+
+    // Linear interpolation between start and end
+    const progress = Math.min(this.bounceCount / bouncesUntilMax, 1);
+    const newFrictionAir = start - (start - end) * progress;
+
+    // Update mascot's frictionAir property
+    Matter.Body.set(this.mascot, { frictionAir: newFrictionAir });
+
+    // Optional: Log difficulty changes for debugging
+    // console.log(`Bounce ${this.bounceCount}: frictionAir = ${newFrictionAir.toFixed(4)}`);
+  }
+
+  /**
    * Handle loss (ball fell off screen)
    */
   handleLoss() {
@@ -289,6 +314,10 @@ export class GameCore {
     this.idleFloatStartTime = null;
     this.gameStarted = false;
     this.hasLost = false;
+
+    // Reset bounce count and difficulty
+    this.bounceCount = 0;
+    this.updateDifficulty();
   }
 
   /**
@@ -344,6 +373,10 @@ export class GameCore {
 
         // Reveal next word (Milestone 3)
         this.revealNextWord();
+
+        // Increment bounce count and update difficulty
+        this.bounceCount++;
+        this.updateDifficulty();
       }
 
       // Check if mascot hit a wall/boundary
