@@ -177,6 +177,14 @@ export class GameCore {
     // Downward bounce prevention (needs to be applied AFTER Matter.js collision resolution)
     this.needsVelocityFlip = false; // Flag to flip velocity after Engine.update()
 
+    // 3D Sphere rotation state
+    this.sphereRotationX = 0; // Current rotation around X axis (tilt forward/back)
+    this.sphereRotationY = 0; // Current rotation around Y axis (spin left/right)
+    this.sphereRotationZ = 0; // Current rotation around Z axis (roll clockwise/counter-clockwise)
+    this.sphereRotationVelX = 0; // Rotation velocity from bounce impulse
+    this.sphereRotationVelY = 0; // Rotation velocity from bounce impulse
+    this.sphereRotationVelZ = 0; // Rotation velocity from bounce impulse (roll)
+
     // Color system - now managed by primaryColorManager
     // Color updates are handled externally for universal access
 
@@ -202,6 +210,9 @@ export class GameCore {
     this.wordIndex = 0; // Current word in message
     this.currentWord = null; // Currently displayed word { text, timestamp }
     this.shouldSpawnCoinOnNextBounce = false; // Flag to spawn coin after message completes
+    
+    // Audio playback tracking for mouth animation
+    this.audioPlayingUntil = 0; // Timestamp when current word audio will finish
 
     // Load current message from messages.json if not in preview mode
     // Preview mode is detected by presence of wordTimings or wordAudioSegments
@@ -423,6 +434,61 @@ export class GameCore {
         const timeSinceTrailBounce = currentTime - trail.bounceTime;
         return timeSinceTrailBounce < activeAfterBounceMs + endFadeDurationMs;
       });
+    }
+
+    // Update 3D sphere rotation based on impulse and physics
+    if (config.physics.mascot.sphere3D?.enabled) {
+      const sphereConfig = config.physics.mascot.sphere3D;
+      
+      // Apply impulse rotation (from bounces, decays over time)
+      if (sphereConfig.bounceImpulse?.enabled) {
+        this.sphereRotationX += this.sphereRotationVelX;
+        this.sphereRotationY += this.sphereRotationVelY;
+        this.sphereRotationZ += this.sphereRotationVelZ;
+        
+        // Decay impulse velocities
+        this.sphereRotationVelX *= sphereConfig.bounceImpulse.decay;
+        this.sphereRotationVelY *= sphereConfig.bounceImpulse.decay;
+        this.sphereRotationVelZ *= sphereConfig.bounceImpulse.decay;
+        
+        // Stop tiny movements
+        if (Math.abs(this.sphereRotationVelX) < 0.001) this.sphereRotationVelX = 0;
+        if (Math.abs(this.sphereRotationVelY) < 0.001) this.sphereRotationVelY = 0;
+        if (Math.abs(this.sphereRotationVelZ) < 0.001) this.sphereRotationVelZ = 0;
+      }
+      
+      // Position-based rotation: face looks in direction of ball position
+      // Ball on left = face rotates left, ball on right = face rotates right
+      const positionInfluence = sphereConfig.positionInfluence || 0.4;
+      const screenCenterX = this.width / 2;
+      const ballOffsetX = (this.mascot.position.x - screenCenterX) / screenCenterX; // -1 to 1
+      const maxY = sphereConfig.maxRotationY || 0.6;
+      const targetRotationY = ballOffsetX * maxY * positionInfluence;
+      
+      // Smoothly blend towards position-based rotation
+      const blendSpeed = 0.1;
+      this.sphereRotationY += (targetRotationY - this.sphereRotationY) * blendSpeed;
+      
+      // Return to center for X and Z rotation (vertical tilt and roll)
+      if (sphereConfig.returnToCenter?.enabled) {
+        const strength = sphereConfig.returnToCenter.strength;
+        this.sphereRotationX *= (1 - strength);
+        this.sphereRotationZ *= (1 - strength);
+      }
+      
+      // Idle wobble when not playing (gentle oscillation on top of position)
+      if (!this.gameStarted && sphereConfig.idleWobble?.enabled) {
+        const time = Date.now() / 1000;
+        const wobble = Math.sin(time * sphereConfig.idleWobble.speed * Math.PI * 2) * sphereConfig.idleWobble.amplitudeY;
+        this.sphereRotationY += wobble * 0.3; // Add subtle wobble
+      }
+      
+      // Clamp rotation to max values (keeps face mostly visible)
+      const maxX = sphereConfig.maxRotationX || 0.5;
+      const maxZ = sphereConfig.maxRotationZ || 0.3;
+      this.sphereRotationX = Math.max(-maxX, Math.min(maxX, this.sphereRotationX));
+      this.sphereRotationY = Math.max(-maxY, Math.min(maxY, this.sphereRotationY));
+      this.sphereRotationZ = Math.max(-maxZ, Math.min(maxZ, this.sphereRotationZ));
     }
 
     // Apply velocity capping (safety valve) - scale caps with time dilation
@@ -677,6 +743,26 @@ export class GameCore {
           timestamp: currentTime,
         };
 
+        // Apply 3D sphere rotation impulse on bounce
+        // Face tilts in the direction of the bounce (physically intuitive)
+        if (config.physics.mascot.sphere3D?.enabled && config.physics.mascot.sphere3D?.bounceImpulse?.enabled) {
+          const sphereConfig = config.physics.mascot.sphere3D;
+          const vel = mascotBody.velocity;
+          const strength = sphereConfig.bounceImpulse.strength;
+          
+          // Horizontal velocity causes horizontal spin (like a ball rolling)
+          // Positive X velocity = spinning right = negative Y rotation visually
+          this.sphereRotationVelY += -vel.x * strength * 0.02;
+          
+          // Impact causes slight forward tilt (like getting hit)
+          this.sphereRotationVelX += Math.abs(vel.y) * strength * 0.01;
+          
+          // Z rotation (roll) based on bounce angle
+          // If bouncing up-right, roll clockwise; if up-left, roll counter-clockwise
+          // This creates a "banking" effect like an airplane turning
+          this.sphereRotationVelZ += vel.x * strength * 0.03;
+        }
+
         // Check if we just completed the message (wordIndex wrapped from last to 0)
         const wasLastWord = this.wordIndex === this.message.length - 1;
         
@@ -715,6 +801,17 @@ export class GameCore {
       // Check if mascot hit a wall/boundary
       const wallBody = bodyA.label === 'wall' ? bodyA : bodyB.label === 'wall' ? bodyB : null;
       if (mascotBody && wallBody) {
+        // Apply 3D sphere rotation impulse on wall hit
+        // Face turns slightly towards the wall on impact
+        if (config.physics.mascot.sphere3D?.enabled && config.physics.mascot.sphere3D?.bounceImpulse?.enabled) {
+          const sphereConfig = config.physics.mascot.sphere3D;
+          const strength = sphereConfig.bounceImpulse.strength;
+          const isLeftWall = wallBody.position.x < this.width / 2;
+          
+          // Turn face towards the wall that was hit
+          this.sphereRotationVelY += (isLeftWall ? -1 : 1) * strength * 0.3;
+        }
+
         // Randomly pick one of the chord tones for musical variety (but prevent consecutive repeats)
         const wallBumpVariants = ['wall-bump-C4', 'wall-bump-E4', 'wall-bump-G4', 'wall-bump-C5'];
         const availableVariants = wallBumpVariants.filter(v => v !== this.lastWallBumpSound);
@@ -1020,6 +1117,9 @@ export class GameCore {
           const endSeconds = timing.end / 1000;
           const duration = endSeconds - startSeconds;
 
+          // Track when audio will finish (for mouth animation)
+          this.audioPlayingUntil = Date.now() + (duration * 1000);
+
           // Seek and play using expo-audio
           this.audioPlayer.seekTo(startSeconds);
           this.audioPlayer.play();
@@ -1050,10 +1150,47 @@ export class GameCore {
   }
 
   /**
+   * Check if voice audio is currently playing (for mouth animation)
+   */
+  isVoicePlaying() {
+    return Date.now() < this.audioPlayingUntil;
+  }
+
+  /**
+   * Get progress through current word audio (0 to 1)
+   * Useful for smooth mouth animation
+   */
+  getVoiceProgress() {
+    if (!this.currentWord || !this.audioPlayingUntil) return 0;
+    const elapsed = Date.now() - this.currentWord.timestamp;
+    const duration = this.audioPlayingUntil - this.currentWord.timestamp;
+    if (duration <= 0) return 0;
+    return Math.min(1, Math.max(0, elapsed / duration));
+  }
+
+  /**
    * Get current Y velocity of mascot
    */
   getMascotVelocityY() {
     return this.mascot.velocity.y;
+  }
+
+  /**
+   * Get current X velocity of mascot
+   */
+  getMascotVelocityX() {
+    return this.mascot.velocity.x;
+  }
+
+  /**
+   * Get 3D sphere rotation state
+   */
+  getSphereRotation() {
+    return {
+      rotationX: this.sphereRotationX,
+      rotationY: this.sphereRotationY,
+      rotationZ: this.sphereRotationZ,
+    };
   }
 
   /**

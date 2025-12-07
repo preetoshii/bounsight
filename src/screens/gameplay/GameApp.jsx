@@ -38,6 +38,7 @@ export function GameApp() {
     gelatoCreationTime: null,
     currentWord: null,
     mascotVelocityY: 0,
+    mascotVelocityX: 0,
     mascotRadius: 45,
     parallaxStars: [],
     trails: [],
@@ -63,6 +64,10 @@ export function GameApp() {
     progressBarGameplayStartTime: null, // When we entered gameplay state
     gameStarted: false,
     hasLost: false,
+    // 3D sphere rotation state
+    sphereRotation: { rotationX: 0, rotationY: 0, rotationZ: 0 },
+    // Voice audio state for mouth animation
+    isVoicePlaying: false,
   });
   
   // Frame counter for minimal React re-render trigger (just a number, not full reconciliation)
@@ -215,6 +220,7 @@ export function GameApp() {
       state.gelatoCreationTime = gameCore.current.getGelatoCreationTime();
       state.currentWord = gameCore.current.getCurrentWord();
       state.mascotVelocityY = gameCore.current.getMascotVelocityY();
+      state.mascotVelocityX = gameCore.current.getMascotVelocityX();
       state.mascotRadius = gameCore.current.getMascotRadius();
       state.parallaxStars = gameCore.current.getParallaxStars();
       const trailData = gameCore.current.getTrail();
@@ -231,6 +237,8 @@ export function GameApp() {
       state.coins = gameCore.current.getCoins();
       state.coinCount = gameCore.current.getCoinCount();
       state.progress = gameCore.current.getProgress();
+      state.sphereRotation = gameCore.current.getSphereRotation();
+      state.isVoicePlaying = gameCore.current.isVoicePlaying();
       
       // Handle coin deposit animation during cutscene
       if (state.coinCountCutsceneActive && state.coinCountCutsceneStartTime !== null) {
@@ -425,6 +433,7 @@ export function GameApp() {
           state.gelatoCreationTime = gameCore.current.getGelatoCreationTime();
           state.currentWord = gameCore.current.getCurrentWord();
           state.mascotVelocityY = gameCore.current.getMascotVelocityY();
+          state.mascotVelocityX = gameCore.current.getMascotVelocityX();
           state.mascotRadius = gameCore.current.getMascotRadius();
           state.parallaxStars = gameCore.current.getParallaxStars();
           const trailData = gameCore.current.getTrail();
@@ -444,6 +453,8 @@ export function GameApp() {
           state.progress = gameCore.current.getProgress();
           state.gameStarted = gameCore.current.getGameStarted();
           state.hasLost = gameCore.current.getHasLost();
+          state.sphereRotation = gameCore.current.getSphereRotation();
+          state.isVoicePlaying = gameCore.current.isVoicePlaying();
           
           setFrame(prev => prev + 1);
 

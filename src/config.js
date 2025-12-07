@@ -84,15 +84,62 @@ export const config = {
       frictionAir: 0.005,     // Air resistance affecting terminal velocity (lower = falls faster)
       mass: 1,                // Mass affects force calculations (default: 1)
       
-      // Face (eyes and mouth)
+      // Face (eyes and mouth) - legacy 2D face
       face: {
-        enabled: true,         // Show face on ball
+        enabled: false,        // Show 2D face on ball (disable when using sphere3D)
         eyeSize: 3,            // Eye radius
         eyeSpacing: 14,        // Distance between eyes
         eyeOffsetY: -6,        // Eyes Y position (negative = above center)
         mouthWidth: 14,        // Mouth width
         mouthHeight: 6,        // Mouth height (for smile curve)
         mouthOffsetY: 8,       // Mouth Y position (positive = below center)
+      },
+      
+      // 3D Sphere effect - face wrapped around rotating sphere
+      sphere3D: {
+        enabled: true,         // Enable 3D rotating face (disable flat face when using this)
+        
+        // Face rendering options
+        faceOpacity: 0.9,      // Opacity of face features (0.0 - 1.0)
+        faceStrokeWidth: 2.5,  // Thickness of face feature lines
+        
+        // Rotation limits (keeps face mostly visible)
+        maxRotationX: 0.4,     // Max tilt forward/back in radians (~23 degrees)
+        maxRotationY: 0.5,     // Max spin left/right in radians (~29 degrees)
+        maxRotationZ: 0.25,    // Max roll clockwise/counter-clockwise in radians (~14 degrees)
+        
+        // Position-based rotation: face looks toward where ball is on screen
+        // Ball on left side = face looks left, ball on right = face looks right
+        positionInfluence: 0.6, // How much position affects rotation (0 = none, 1 = full)
+        
+        // Return to center (for vertical tilt only, horizontal follows position)
+        returnToCenter: {
+          enabled: true,       // Enable return-to-center spring
+          strength: 0.08,      // How strongly it pulls back (higher = snappier)
+        },
+        
+        // Bounce impulse - rotation on gelato/wall impact
+        bounceImpulse: {
+          enabled: true,       // Add rotation impulse on bounce
+          strength: 0.15,      // Impulse strength (subtle)
+          decay: 0.85,         // Quick decay (0.85 = 15% decay per frame)
+        },
+        
+        // Idle animation - gentle wobble instead of continuous spin
+        idleWobble: {
+          enabled: true,       // Gentle idle wobble
+          amplitudeY: 0.1,     // Wobble amount (radians)
+          speed: 0.5,          // Wobble speed (cycles per second)
+        },
+        
+        // Mouth animation settings (for speaking)
+        mouth: {
+          closedHeight: 0.06,  // Height when closed (thicker = more visible line)
+          openHeight: 0.18,    // Height when fully open
+          width: 0.32,         // Horizontal width of mouth
+          oscillationHz: 2,    // How fast mouth opens/closes when speaking (cycles per second)
+          centerY: 0.38,       // Vertical position on face (0 = center, positive = lower)
+        },
       },
       
       // Motion trail effect
@@ -183,7 +230,7 @@ export const config = {
     //   - Bounce heights, trajectories, everything stays proportional
     //   - Pure speed increase without changing game feel
     speed: {
-      start: 1,            // Starting time multiplier (1.0 = normal time)
+      start: .7,            // Starting time multiplier (1.0 = normal time)
       end: 1.7,              // Ending time multiplier (2.0 = 2x speed, like fast-forward)
       bouncesUntilMax: 30,   // Number of bounces to reach maximum difficulty
     },
@@ -330,7 +377,7 @@ export const config = {
   // === WALLS (Screen Boundaries) ===
   walls: {
     behavior: 'bounce',       // Boundary behavior: 'bounce' (reflect) or 'wrap' (teleport to other side)
-    restitution: 1.2,         // Wall bounciness (0 = absorbs all energy, 0.5 = loses half, 1 = perfect bounce)
+    restitution: 1,         // Wall bounciness (0 = absorbs all energy, 0.5 = loses half, 1 = perfect bounce)
     thickness: 5,             // Thickness of boundary walls in pixels (affects physics collision edge)
     visible: false,           // Whether to render walls visually (false = invisible boundaries at screen edges)
 
@@ -402,7 +449,7 @@ export const config = {
   // Multi-layer scrolling background that creates illusion of climbing through space
   // Stars move downward as ball travels upward (cumulative upward distance only)
   parallax: {
-    enabled: false,                // Toggle parallax background on/off
+    enabled: true,                // Toggle parallax background on/off
     density: 0.1,                 // Density multiplier (0.5 = half as many stars, 1.0 = default, 2.0 = double)
     opacity: 0.5,                 // Global opacity multiplier (0.3 = subtle, 0.5 = half brightness, 1.0 = full)
 

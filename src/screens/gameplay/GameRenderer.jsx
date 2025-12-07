@@ -319,6 +319,302 @@ function ZogChanFace({ x, y, color, isSpeaking, radius }) {
 }
 
 /**
+ * Helper: Transform a 2D point on a sphere surface to screen coordinates
+ * Takes a point in "face space" (normalized -1 to 1) and projects it onto
+ * a rotating sphere, returning screen coordinates and visibility
+ */
+function transformFacePoint(faceX, faceY, rotationX, rotationY, centerX, centerY, radius) {
+  // Convert face coordinates to spherical position on the front of the sphere
+  // faceX/faceY are in range -1 to 1, representing position on the face
+  // We map these to a hemisphere (the front of the sphere)
+  
+  // Limit how far to the edges we go (keeps face features visible longer)
+  const maxAngle = Math.PI * 0.4; // 40% of hemisphere
+  const theta = faceX * maxAngle; // Longitude angle from center
+  const phi = Math.PI / 2 + faceY * maxAngle; // Latitude angle (0.5 = equator)
+  
+  // Convert spherical to 3D cartesian (on unit sphere)
+  let sphereX = Math.sin(phi) * Math.sin(theta);
+  let sphereY = -Math.cos(phi);
+  let sphereZ = Math.sin(phi) * Math.cos(theta);
+  
+  // Apply Y rotation (horizontal spin)
+  const cosY = Math.cos(rotationY);
+  const sinY = Math.sin(rotationY);
+  const rotatedX = sphereX * cosY - sphereZ * sinY;
+  const rotatedZ1 = sphereX * sinY + sphereZ * cosY;
+  
+  // Apply X rotation (vertical tilt)
+  const cosX = Math.cos(rotationX);
+  const sinX = Math.sin(rotationX);
+  const rotatedY = sphereY * cosX - rotatedZ1 * sinX;
+  const rotatedZ = sphereY * sinX + rotatedZ1 * cosX;
+  
+  // Project to screen coordinates
+  const screenX = centerX + rotatedX * radius;
+  const screenY = centerY + rotatedY * radius;
+  
+  // Visibility: front-facing if Z > 0
+  const isVisible = rotatedZ > -0.1;
+  const opacity = Math.max(0, Math.min(1, rotatedZ + 0.3)); // Fade as it turns away
+  
+  return { x: screenX, y: screenY, z: rotatedZ, isVisible, opacity };
+}
+
+/**
+ * RotatingFace3D - Renders the ZogChan face wrapped around a 3D rotating sphere
+ * Face features are projected onto the sphere surface and rotate with it
+ * Mouth animates smoothly when voice audio is playing
+ */
+function RotatingFace3D({ x, y, color, radius, rotationX = 0, rotationY = 0, rotationZ = 0, isVoicePlaying = false }) {
+  const sphereConfig = config.physics.mascot.sphere3D || {};
+  const faceOpacity = sphereConfig.faceOpacity || 0.9;
+  const strokeWidth = sphereConfig.faceStrokeWidth || 2.5;
+  
+  // Scale face to fit inside sphere
+  const faceRadius = radius * 0.75;
+  
+  // Helper to apply Z rotation (roll) around face center
+  const applyZRotation = (px, py, centerX, centerY, angleZ) => {
+    const cosZ = Math.cos(angleZ);
+    const sinZ = Math.sin(angleZ);
+    const dx = px - centerX;
+    const dy = py - centerY;
+    return {
+      x: centerX + dx * cosZ - dy * sinZ,
+      y: centerY + dx * sinZ + dy * cosZ,
+    };
+  };
+
+  // Helper to create a transformed path from face-space points
+  const createTransformedPath = (points, close = false) => {
+    const path = Skia.Path.Make();
+    let started = false;
+    let minOpacity = 1;
+    
+    for (let i = 0; i < points.length; i++) {
+      const transformed = transformFacePoint(
+        points[i].x, points[i].y,
+        rotationX, rotationY,
+        x, y, faceRadius
+      );
+      
+      if (transformed.isVisible) {
+        // Apply Z rotation (roll) around face center
+        const rolled = applyZRotation(transformed.x, transformed.y, x, y, rotationZ);
+        
+        if (!started) {
+          path.moveTo(rolled.x, rolled.y);
+          started = true;
+        } else {
+          path.lineTo(rolled.x, rolled.y);
+        }
+        minOpacity = Math.min(minOpacity, transformed.opacity);
+      }
+    }
+    
+    if (close && started) {
+      path.close();
+    }
+    
+    return { path, opacity: minOpacity, visible: started };
+  };
+  
+  // Check if face center is visible
+  const faceCenter = transformFacePoint(0, 0, rotationX, rotationY, x, y, faceRadius);
+  if (!faceCenter.isVisible || faceCenter.opacity < 0.1) {
+    return null; // Face is on back of sphere
+  }
+  
+  // Define face features in normalized coordinates (-1 to 1)
+  // Left eye: horizontal line
+  const leftEye = [
+    { x: -0.45, y: -0.15 },
+    { x: -0.15, y: -0.15 },
+  ];
+  
+  // Right eye: horizontal line
+  const rightEye = [
+    { x: 0.15, y: -0.15 },
+    { x: 0.45, y: -0.15 },
+  ];
+  
+  // Left eyebrow: curved arc above eye
+  const leftEyebrow = [];
+  for (let i = 0; i <= 8; i++) {
+    const t = i / 8;
+    leftEyebrow.push({
+      x: -0.5 + t * 0.4,
+      y: -0.45 + Math.sin(t * Math.PI) * 0.15,
+    });
+  }
+  
+  // Right eyebrow: curved arc above eye
+  const rightEyebrow = [];
+  for (let i = 0; i <= 8; i++) {
+    const t = i / 8;
+    rightEyebrow.push({
+      x: 0.1 + t * 0.4,
+      y: -0.45 + Math.sin(t * Math.PI) * 0.15,
+    });
+  }
+  
+  // Nose: small curved line
+  const nose = [];
+  for (let i = 0; i <= 6; i++) {
+    const t = i / 6;
+    nose.push({
+      x: -0.1 + t * 0.2,
+      y: 0.1 + Math.sin(t * Math.PI) * 0.08,
+    });
+  }
+  
+  // Mouth: oval shape that opens (taller) and closes (flatter) like a real mouth
+  // When voice is playing, mouth opens and closes smoothly
+  // When voice stops, mouth completes its oscillation cycle before closing
+  const mouthConfig = sphereConfig.mouth || {};
+  const mouthClosedHeight = mouthConfig.closedHeight || 0.06;
+  const mouthOpenHeight = mouthConfig.openHeight || 0.18;
+  const mouthWidth = mouthConfig.width || 0.22;
+  const mouthOscillationHz = mouthConfig.oscillationHz || 3;
+  const mouthCenterY = mouthConfig.centerY || 0.38;
+  
+  let mouthOpenAmount = 0;
+  const time = Date.now() / 1000;
+  const easeBackDuration = 0.15; // How long to ease back to closed (seconds)
+  
+  if (isVoicePlaying) {
+    // Oscillate mouth open/close at configured Hz for speech rhythm
+    mouthOpenAmount = (Math.sin(time * mouthOscillationHz * Math.PI * 2) + 1) / 2; // 0 to 1
+    // Track state for smooth close
+    mouthAnimationState.wasPlaying = true;
+    mouthAnimationState.lastOpenAmount = mouthOpenAmount;
+    mouthAnimationState.stopTime = 0;
+  } else if (mouthAnimationState.wasPlaying) {
+    // Voice just stopped - ease back to closed smoothly
+    if (mouthAnimationState.stopTime === 0) {
+      mouthAnimationState.stopTime = time;
+    }
+    
+    const timeSinceStop = time - mouthAnimationState.stopTime;
+    const easeProgress = Math.min(1, timeSinceStop / easeBackDuration);
+    
+    // Ease out: starts fast, slows down as it closes
+    const easeOut = 1 - Math.pow(1 - easeProgress, 2);
+    mouthOpenAmount = mouthAnimationState.lastOpenAmount * (1 - easeOut);
+    
+    if (easeProgress >= 1) {
+      // Finished easing, reset state
+      mouthAnimationState.wasPlaying = false;
+      mouthOpenAmount = 0;
+    }
+  }
+  
+  // Mouth is an oval: wide when closed, taller when open
+  const mouthHeight = mouthClosedHeight + (mouthOpenHeight - mouthClosedHeight) * mouthOpenAmount;
+  
+  // Generate oval points
+  const mouth = [];
+  const ovalSegments = 16;
+  for (let i = 0; i <= ovalSegments; i++) {
+    const angle = (i / ovalSegments) * Math.PI * 2;
+    mouth.push({
+      x: Math.cos(angle) * mouthWidth,
+      y: mouthCenterY + Math.sin(angle) * mouthHeight,
+    });
+  }
+  
+  // Forehead dot (with Z rotation applied)
+  const foreheadDotRaw = transformFacePoint(0, -0.7, rotationX, rotationY, x, y, faceRadius);
+  const foreheadDotRolled = applyZRotation(foreheadDotRaw.x, foreheadDotRaw.y, x, y, rotationZ);
+  const foreheadDot = { ...foreheadDotRaw, x: foreheadDotRolled.x, y: foreheadDotRolled.y };
+  
+  // Create transformed paths
+  const leftEyePath = createTransformedPath(leftEye);
+  const rightEyePath = createTransformedPath(rightEye);
+  const leftEyebrowPath = createTransformedPath(leftEyebrow);
+  const rightEyebrowPath = createTransformedPath(rightEyebrow);
+  const nosePath = createTransformedPath(nose);
+  const mouthPath = createTransformedPath(mouth, true); // Close path for filled oval
+  
+  return (
+    <Group>
+      {/* Left eyebrow */}
+      {leftEyebrowPath.visible && (
+        <Path
+          path={leftEyebrowPath.path}
+          color={color}
+          opacity={faceOpacity * leftEyebrowPath.opacity}
+          style="stroke"
+          strokeWidth={strokeWidth}
+          strokeCap="round"
+        />
+      )}
+      
+      {/* Right eyebrow */}
+      {rightEyebrowPath.visible && (
+        <Path
+          path={rightEyebrowPath.path}
+          color={color}
+          opacity={faceOpacity * rightEyebrowPath.opacity}
+          style="stroke"
+          strokeWidth={strokeWidth}
+          strokeCap="round"
+        />
+      )}
+      
+      {/* Left eye */}
+      {leftEyePath.visible && (
+        <Path
+          path={leftEyePath.path}
+          color={color}
+          opacity={faceOpacity * leftEyePath.opacity}
+          style="stroke"
+          strokeWidth={strokeWidth * 1.2}
+          strokeCap="round"
+        />
+      )}
+      
+      {/* Right eye */}
+      {rightEyePath.visible && (
+        <Path
+          path={rightEyePath.path}
+          color={color}
+          opacity={faceOpacity * rightEyePath.opacity}
+          style="stroke"
+          strokeWidth={strokeWidth * 1.2}
+          strokeCap="round"
+        />
+      )}
+      
+      {/* Nose - removed for cleaner look */}
+      
+      {/* Mouth - filled oval that opens/closes */}
+      {mouthPath.visible && (
+        <Path
+          path={mouthPath.path}
+          color={color}
+          opacity={faceOpacity * mouthPath.opacity}
+          style="fill"
+        />
+      )}
+      
+      {/* Forehead dot */}
+      {foreheadDot.isVisible && (
+        <Circle
+          cx={foreheadDot.x}
+          cy={foreheadDot.y}
+          r={strokeWidth * 1.5}
+          color={color}
+          opacity={faceOpacity * foreheadDot.opacity}
+          style="fill"
+        />
+      )}
+    </Group>
+  );
+}
+
+/**
  * GameRenderer - Unified Skia renderer for all platforms
  * This same code works on Web, iOS, and Android
  * Touch events pass through the Canvas to allow line drawing
@@ -326,9 +622,12 @@ function ZogChanFace({ x, y, color, isSpeaking, radius }) {
  * Uses shared gameState object for direct mutation without React reconciliation overhead.
  * Frame prop triggers re-render when game state updates (minimal React reconciliation).
  */
+// Track mouth animation state for smooth close
+const mouthAnimationState = { wasPlaying: false, stopTime: 0, lastOpenAmount: 0 };
+
 const GameRendererComponent = ({ width, height, gameState, frame, lines = [], currentPath = null, debugMode = false }) => {
   // Extract values from shared state object (read directly, no React reconciliation)
-  const { mascotPos, obstacles = [], bounceImpact, gelatoCreationTime, currentWord, mascotVelocityY = 0, mascotRadius = 45, parallaxStars = [], trails = [], primaryColor = '#FFFFFF', particles = [], wallGlows = [], bounceRipples = [], lastBounceScale = null, deathFadeProgress = 0, deathStartTime = null, coinCountCutsceneActive = false, coinCountCutsceneStartTime = null, coins = [], coinCount = 0 } = gameState;
+  const { mascotPos, obstacles = [], bounceImpact, gelatoCreationTime, currentWord, mascotVelocityY = 0, mascotVelocityX = 0, mascotRadius = 45, parallaxStars = [], trails = [], primaryColor = '#FFFFFF', particles = [], wallGlows = [], bounceRipples = [], lastBounceScale = null, deathFadeProgress = 0, deathStartTime = null, coinCountCutsceneActive = false, coinCountCutsceneStartTime = null, coins = [], coinCount = 0, sphereRotation = { rotationX: 0, rotationY: 0, rotationZ: 0 }, isVoicePlaying = false } = gameState;
   const mascotX = mascotPos.x;
   const mascotY = mascotPos.y;
 
@@ -942,8 +1241,22 @@ const GameRendererComponent = ({ width, height, gameState, frame, lines = [], cu
                 strokeWidth={config.gelato.thickness}
               />
 
-              {/* ZogChan Face */}
-              {config.physics.mascot.face.enabled && (
+              {/* 3D Rotating Face (when sphere3D enabled) */}
+              {config.physics.mascot.sphere3D?.enabled && (
+                <RotatingFace3D
+                  x={mascotX}
+                  y={mascotY}
+                  color={primaryColor}
+                  radius={mascotRadius * scale}
+                  rotationX={sphereRotation.rotationX}
+                  rotationY={sphereRotation.rotationY}
+                  rotationZ={sphereRotation.rotationZ}
+                  isVoicePlaying={isVoicePlaying}
+                />
+              )}
+
+              {/* ZogChan Face (legacy, when enabled and sphere3D disabled) */}
+              {config.physics.mascot.face.enabled && !config.physics.mascot.sphere3D?.enabled && (
                 <ZogChanFace
                   x={mascotX}
                   y={mascotY}
