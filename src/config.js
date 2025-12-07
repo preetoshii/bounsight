@@ -102,6 +102,7 @@ export const config = {
         // Face rendering options
         faceOpacity: 0.9,      // Opacity of face features (0.0 - 1.0)
         faceStrokeWidth: 2.5,  // Thickness of face feature lines
+        eyeThickness: 1.9,     // Eye stroke multiplier (higher = thicker eyes)
         
         // Rotation limits (keeps face mostly visible)
         maxRotationX: 0.4,     // Max tilt forward/back in radians (~23 degrees)
@@ -110,7 +111,10 @@ export const config = {
         
         // Position-based rotation: face looks toward where ball is on screen
         // Ball on left side = face looks left, ball on right = face looks right
-        positionInfluence: 0.6, // How much position affects rotation (0 = none, 1 = full)
+        positionInfluence: 1, // How much horizontal position affects Y rotation (0 = none, 1 = full)
+        
+        // Velocity-based rotation: face looks up when rising, down when falling
+        velocityInfluence: 0.07, // How much vertical velocity affects X rotation (0 = none)
         
         // Return to center (for vertical tilt only, horizontal follows position)
         returnToCenter: {
@@ -134,9 +138,10 @@ export const config = {
         
         // Mouth animation settings (for speaking)
         mouth: {
-          closedHeight: 0.06,  // Height when closed (thicker = more visible line)
-          openHeight: 0.18,    // Height when fully open
-          width: 0.32,         // Horizontal width of mouth
+          closedHeight: 0.15,  // Height when closed (thin line)
+          openHeight: 0.6,    // Height when fully open
+          width: 0.60,         // Horizontal width of mouth
+          cornerRadius: 0.1, // Rounded corner radius
           oscillationHz: 2,    // How fast mouth opens/closes when speaking (cycles per second)
           centerY: 0.38,       // Vertical position on face (0 = center, positive = lower)
         },
@@ -231,8 +236,8 @@ export const config = {
     //   - Pure speed increase without changing game feel
     speed: {
       start: .7,            // Starting time multiplier (1.0 = normal time)
-      end: 1.7,              // Ending time multiplier (2.0 = 2x speed, like fast-forward)
-      bouncesUntilMax: 30,   // Number of bounces to reach maximum difficulty
+      end: 1.5,              // Ending time multiplier (2.0 = 2x speed, like fast-forward)
+      bouncesUntilMax: 50,   // Number of bounces to reach maximum difficulty
     },
 
     // Example progression:
@@ -504,6 +509,7 @@ export const config = {
   // === VISUALS ===
   visuals: {
     backgroundColor: '#000000',   // Canvas background color (pure black)
+    
     wordColor: '#FFFFFF',         // Text color for revealed words
     wordFontSize: 145,            // Base font size for revealed words in pixels
     wordMaxWidthPercent: 98,      // Max % of screen width for words (auto-scales down if needed)

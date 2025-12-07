@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, memo } from 'react';
+import React, { useEffect, useRef, memo, useMemo } from 'react';
 import { Canvas, Circle, Fill, Line, Rect, RoundedRect, vec, DashPathEffect, Path, Skia, Group, Oval, Blur, LinearGradient } from '@shopify/react-native-skia';
 import { Text, View, StyleSheet, Animated } from 'react-native';
 import { config } from '../../config';
@@ -469,15 +469,16 @@ function RotatingFace3D({ x, y, color, radius, rotationX = 0, rotationY = 0, rot
     });
   }
   
-  // Mouth: oval shape that opens (taller) and closes (flatter) like a real mouth
+  // Mouth: rounded rectangle that opens (taller) and closes (flatter) like a real mouth
   // When voice is playing, mouth opens and closes smoothly
-  // When voice stops, mouth completes its oscillation cycle before closing
+  // When voice stops, eases back to closed
   const mouthConfig = sphereConfig.mouth || {};
-  const mouthClosedHeight = mouthConfig.closedHeight || 0.06;
-  const mouthOpenHeight = mouthConfig.openHeight || 0.18;
-  const mouthWidth = mouthConfig.width || 0.22;
+  const mouthClosedHeight = mouthConfig.closedHeight || 0.04;
+  const mouthOpenHeight = mouthConfig.openHeight || 0.16;
+  const mouthWidth = mouthConfig.width || 0.28;
   const mouthOscillationHz = mouthConfig.oscillationHz || 3;
   const mouthCenterY = mouthConfig.centerY || 0.38;
+  const mouthCornerRadius = mouthConfig.cornerRadius || 0.03;
   
   let mouthOpenAmount = 0;
   const time = Date.now() / 1000;
@@ -510,17 +511,55 @@ function RotatingFace3D({ x, y, color, radius, rotationX = 0, rotationY = 0, rot
     }
   }
   
-  // Mouth is an oval: wide when closed, taller when open
+  // Mouth is a rounded rectangle: wide, short when closed, taller when open
+  // Real mouth physics: upper lip stays mostly fixed, lower jaw drops down
+  // So expansion is ~85% downward, ~15% upward
   const mouthHeight = mouthClosedHeight + (mouthOpenHeight - mouthClosedHeight) * mouthOpenAmount;
+  const halfWidth = mouthWidth / 2;
+  const expansionAmount = mouthHeight - mouthClosedHeight;
+  const upwardExpansion = expansionAmount * 0.15;   // 15% goes up
+  const downwardExpansion = expansionAmount * 0.85; // 85% goes down
   
-  // Generate oval points
+  // Top edge stays mostly fixed, bottom edge drops
+  const topY = mouthCenterY - (mouthClosedHeight / 2) - upwardExpansion;
+  const bottomY = mouthCenterY + (mouthClosedHeight / 2) + downwardExpansion;
+  const actualHeight = bottomY - topY;
+  const cornerR = Math.min(mouthCornerRadius, actualHeight / 2); // Corner radius can't exceed half height
+  
+  // Generate rounded rectangle points
   const mouth = [];
-  const ovalSegments = 16;
-  for (let i = 0; i <= ovalSegments; i++) {
-    const angle = (i / ovalSegments) * Math.PI * 2;
+  const cornerSegments = 4; // Segments per corner for smooth rounding
+  
+  // Top-left corner
+  for (let i = 0; i <= cornerSegments; i++) {
+    const angle = Math.PI + (i / cornerSegments) * (Math.PI / 2);
     mouth.push({
-      x: Math.cos(angle) * mouthWidth,
-      y: mouthCenterY + Math.sin(angle) * mouthHeight,
+      x: -halfWidth + cornerR + Math.cos(angle) * cornerR,
+      y: topY + cornerR + Math.sin(angle) * cornerR,
+    });
+  }
+  // Top-right corner
+  for (let i = 0; i <= cornerSegments; i++) {
+    const angle = -Math.PI / 2 + (i / cornerSegments) * (Math.PI / 2);
+    mouth.push({
+      x: halfWidth - cornerR + Math.cos(angle) * cornerR,
+      y: topY + cornerR + Math.sin(angle) * cornerR,
+    });
+  }
+  // Bottom-right corner
+  for (let i = 0; i <= cornerSegments; i++) {
+    const angle = 0 + (i / cornerSegments) * (Math.PI / 2);
+    mouth.push({
+      x: halfWidth - cornerR + Math.cos(angle) * cornerR,
+      y: bottomY - cornerR + Math.sin(angle) * cornerR,
+    });
+  }
+  // Bottom-left corner
+  for (let i = 0; i <= cornerSegments; i++) {
+    const angle = Math.PI / 2 + (i / cornerSegments) * (Math.PI / 2);
+    mouth.push({
+      x: -halfWidth + cornerR + Math.cos(angle) * cornerR,
+      y: bottomY - cornerR + Math.sin(angle) * cornerR,
     });
   }
   
@@ -570,7 +609,7 @@ function RotatingFace3D({ x, y, color, radius, rotationX = 0, rotationY = 0, rot
           color={color}
           opacity={faceOpacity * leftEyePath.opacity}
           style="stroke"
-          strokeWidth={strokeWidth * 1.2}
+          strokeWidth={strokeWidth * (sphereConfig.eyeThickness || 2.5)}
           strokeCap="round"
         />
       )}
@@ -582,7 +621,7 @@ function RotatingFace3D({ x, y, color, radius, rotationX = 0, rotationY = 0, rot
           color={color}
           opacity={faceOpacity * rightEyePath.opacity}
           style="stroke"
-          strokeWidth={strokeWidth * 1.2}
+          strokeWidth={strokeWidth * (sphereConfig.eyeThickness || 2.5)}
           strokeCap="round"
         />
       )}
@@ -1298,6 +1337,7 @@ const GameRendererComponent = ({ width, height, gameState, frame, lines = [], cu
         })()}
       </Group>
       </Group>
+
       </Canvas>
 
       {/* Coin count display on death screen (cutscene) - DISABLED: now shown in progress bar */}

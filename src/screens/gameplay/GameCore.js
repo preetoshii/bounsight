@@ -457,22 +457,32 @@ export class GameCore {
         if (Math.abs(this.sphereRotationVelZ) < 0.001) this.sphereRotationVelZ = 0;
       }
       
-      // Position-based rotation: face looks in direction of ball position
+      // Position-based Y rotation: face looks in direction of ball position
       // Ball on left = face rotates left, ball on right = face rotates right
       const positionInfluence = sphereConfig.positionInfluence || 0.4;
       const screenCenterX = this.width / 2;
       const ballOffsetX = (this.mascot.position.x - screenCenterX) / screenCenterX; // -1 to 1
       const maxY = sphereConfig.maxRotationY || 0.6;
-      const targetRotationY = ballOffsetX * maxY * positionInfluence;
+      const targetRotationY = -ballOffsetX * maxY * positionInfluence; // Inverted direction
       
       // Smoothly blend towards position-based rotation
       const blendSpeed = 0.1;
       this.sphereRotationY += (targetRotationY - this.sphereRotationY) * blendSpeed;
       
-      // Return to center for X and Z rotation (vertical tilt and roll)
+      // Velocity-based X rotation: face looks up when moving up, down when falling
+      // Pure linear 1:1 mapping: rotation directly proportional to velocity
+      // velocity 0 = neutral face, positive velocity = looking down, negative = looking up
+      const velocityInfluence = sphereConfig.velocityInfluence || 0.018;
+      const maxX = sphereConfig.maxRotationX || 0.5;
+      const velocityY = this.mascot.velocity.y;
+      
+      // Direct linear mapping: rotation = -velocity * influence
+      // No smoothing, no tanh, just pure proportional response
+      this.sphereRotationX = Math.max(-maxX, Math.min(maxX, -velocityY * velocityInfluence));
+      
+      // Return to center for Z rotation only (roll)
       if (sphereConfig.returnToCenter?.enabled) {
         const strength = sphereConfig.returnToCenter.strength;
-        this.sphereRotationX *= (1 - strength);
         this.sphereRotationZ *= (1 - strength);
       }
       
@@ -484,7 +494,6 @@ export class GameCore {
       }
       
       // Clamp rotation to max values (keeps face mostly visible)
-      const maxX = sphereConfig.maxRotationX || 0.5;
       const maxZ = sphereConfig.maxRotationZ || 0.3;
       this.sphereRotationX = Math.max(-maxX, Math.min(maxX, this.sphereRotationX));
       this.sphereRotationY = Math.max(-maxY, Math.min(maxY, this.sphereRotationY));
