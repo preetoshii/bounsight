@@ -109,12 +109,11 @@ export const config = {
         maxRotationY: 0.5,     // Max spin left/right in radians (~29 degrees)
         maxRotationZ: 0.25,    // Max roll clockwise/counter-clockwise in radians (~14 degrees)
         
-        // Position-based rotation: face looks toward where ball is on screen
-        // Ball on left side = face looks left, ball on right = face looks right
-        positionInfluence: 1, // How much horizontal position affects Y rotation (0 = none, 1 = full)
-        
-        // Velocity-based rotation: face looks up when rising, down when falling
-        velocityInfluence: 0.07, // How much vertical velocity affects X rotation (0 = none)
+        // Velocity-based rotation: face looks in the direction of movement
+        // Horizontal: moving left = look left, moving right = look right
+        // Vertical: moving up = look up, moving down = look down
+        horizontalVelocityInfluence: 0.04, // How much X velocity affects Y rotation (left/right look)
+        velocityInfluence: 0.07, // How much Y velocity affects X rotation (up/down look)
         
         // Return to center (for vertical tilt only, horizontal follows position)
         returnToCenter: {

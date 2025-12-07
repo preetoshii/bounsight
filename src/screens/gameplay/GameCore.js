@@ -457,17 +457,15 @@ export class GameCore {
         if (Math.abs(this.sphereRotationVelZ) < 0.001) this.sphereRotationVelZ = 0;
       }
       
-      // Position-based Y rotation: face looks in direction of ball position
-      // Ball on left = face rotates left, ball on right = face rotates right
-      const positionInfluence = sphereConfig.positionInfluence || 0.4;
-      const screenCenterX = this.width / 2;
-      const ballOffsetX = (this.mascot.position.x - screenCenterX) / screenCenterX; // -1 to 1
+      // Velocity-based Y rotation: face looks in direction ball is moving
+      // Moving left = face looks left, moving right = face looks right
+      // Direct 1:1 mapping like vertical rotation
+      const horizontalVelocityInfluence = sphereConfig.horizontalVelocityInfluence || 0.04;
       const maxY = sphereConfig.maxRotationY || 0.6;
-      const targetRotationY = -ballOffsetX * maxY * positionInfluence; // Inverted direction
+      const velocityX = this.mascot.velocity.x;
       
-      // Smoothly blend towards position-based rotation
-      const blendSpeed = 0.1;
-      this.sphereRotationY += (targetRotationY - this.sphereRotationY) * blendSpeed;
+      // Direct linear mapping: rotation = -velocity * influence (flipped direction)
+      this.sphereRotationY = Math.max(-maxY, Math.min(maxY, -velocityX * horizontalVelocityInfluence));
       
       // Velocity-based X rotation: face looks up when moving up, down when falling
       // Pure linear 1:1 mapping: rotation directly proportional to velocity
@@ -810,16 +808,9 @@ export class GameCore {
       // Check if mascot hit a wall/boundary
       const wallBody = bodyA.label === 'wall' ? bodyA : bodyB.label === 'wall' ? bodyB : null;
       if (mascotBody && wallBody) {
-        // Apply 3D sphere rotation impulse on wall hit
-        // Face turns slightly towards the wall on impact
-        if (config.physics.mascot.sphere3D?.enabled && config.physics.mascot.sphere3D?.bounceImpulse?.enabled) {
-          const sphereConfig = config.physics.mascot.sphere3D;
-          const strength = sphereConfig.bounceImpulse.strength;
-          const isLeftWall = wallBody.position.x < this.width / 2;
-          
-          // Turn face towards the wall that was hit
-          this.sphereRotationVelY += (isLeftWall ? -1 : 1) * strength * 0.3;
-        }
+        // Wall bounce rotation is now handled automatically via velocity-based rotation
+        // When ball bounces off wall, its X velocity changes direction,
+        // and the face rotation follows the velocity directly
 
         // Randomly pick one of the chord tones for musical variety (but prevent consecutive repeats)
         const wallBumpVariants = ['wall-bump-C4', 'wall-bump-E4', 'wall-bump-G4', 'wall-bump-C5'];
